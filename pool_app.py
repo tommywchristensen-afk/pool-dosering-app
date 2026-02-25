@@ -36,12 +36,12 @@ def save_logs():
 st.set_page_config(page_title="Pool Dosering", layout="wide")
 
 # ────────────────────────────────────────────────
-# Automatisk dark/light mode tilpasning via Streamlit variabler
+# Dark mode / light mode – automatisk tilpasning + mørkere i dark mode
 # ────────────────────────────────────────────────
 
 st.markdown("""
     <style>
-    /* Basis farver – Streamlit skifter automatisk i dark mode */
+    /* Basis farver - Streamlit skifter automatisk */
     :root {
         --bg-color: var(--background-color, #ffffff);
         --text-color: var(--text-color, #000000);
@@ -52,19 +52,26 @@ st.markdown("""
         --copyright-text: #666666;
     }
 
-    body, [data-testid="stAppViewContainer"] {
+    /* Tving mørkere dark mode på telefoner */
+    [data-testid="stAppViewContainer"] {
         background-color: var(--bg-color) !important;
         color: var(--text-color) !important;
     }
 
+    /* Ekstra mørk baggrund i dark mode */
+    body, [data-testid="stAppViewContainer"] {
+        background-color: #0e1117 !important;  /* mørk grå-sort */
+        color: #e0e0e0 !important;
+    }
+
     .stApp > header {
-        background-color: var(--bg-color) !important;
+        background-color: #0e1117 !important;
     }
 
     .alert-box {
-        background-color: #fff3cd !important;
-        border-left: 6px solid #ffc107 !important;
-        color: #664d03 !important;
+        background-color: #4a3c0b !important;  /* mørk gul */
+        border-left: 6px solid #ffcc00 !important;
+        color: #fffacd !important;
         padding: 1.2rem;
         margin: 1rem 0;
         border-radius: 6px;
@@ -77,9 +84,9 @@ st.markdown("""
     }
 
     .warning {
-        background-color: var(--warning-bg) !important;
-        color: var(--warning-text) !important;
-        border: 1px solid #f5c6cb !important;
+        background-color: #3d1f1f !important;
+        color: #ffcccc !important;
+        border: 1px solid #990000 !important;
         padding: 1rem;
         border-radius: 6px;
         margin: 1rem 0;
@@ -87,12 +94,12 @@ st.markdown("""
 
     .copyright {
         font-size: 0.85rem;
-        color: var(--copyright-text);
+        color: #bbbbbb !important;
         text-align: center;
         margin-top: 2rem;
         padding: 1rem;
-        border-top: 1px solid #eee;
-        background-color: var(--copyright-bg);
+        border-top: 1px solid #444 !important;
+        background-color: #1a1d24 !important;
     }
 
     .stButton > button {
@@ -228,16 +235,26 @@ else:
     st.subheader(f"Hæv pH med {-delta_ph_eff:.2f}")
     st.markdown(f"**pH-plus → {ml_plus:.0f} ml**")
 
-if delta_cl_leave < 0.3:
-    st.info("Klor OK ved afgang - ingen Briquetter/Daytabs nødvendige")
-else:
-    briqs = 0.21 * delta_cl_leave * volume
-    briqs_round = round(briqs)
-    new_cl = current_cl + delta_cl_leave
+if current_cl > 6.0:
+    mg_to_lower = current_cl - target_cl_leave
+    antiklor_per_m3_per_mg = 0.83
+    antiklor_total = antiklor_per_m3_per_mg * mg_to_lower * volume
     
-    st.subheader(f"Opkloring til {target_cl_leave} mg/l ved afgang")
-    st.markdown(f"**HTH Briquetter/Daytabs: {briqs:.1f} stk → afrund til {briqs_round} stk**")
-    st.caption(f"→ doserer klor fra {current_cl:.1f} mg/l til {new_cl:.1f} mg/l")
+    st.subheader(f"Sænkning af klor (for højt: {current_cl:.1f} mg/l)")
+    st.markdown(f"**Anti-klor: {antiklor_total:.0f} gram/ml**")
+    st.caption(f"→ sænker klor fra {current_cl:.1f} mg/l til {target_cl_leave} mg/l")
+    st.warning("Vent 1-2 timer efter antiklor, mål igen før yderligere klor-tilsætning!")
+else:
+    if delta_cl_leave < 0.3:
+        st.info("Klor OK ved afgang - ingen Briquetter/Daytabs nødvendige")
+    else:
+        briqs = 0.21 * delta_cl_leave * volume
+        briqs_round = round(briqs)
+        new_cl = current_cl + delta_cl_leave
+        
+        st.subheader(f"Opkloring til {target_cl_leave} mg/l ved afgang")
+        st.markdown(f"**HTH Briquetter/Daytabs: {briqs:.1f} stk → afrund til {briqs_round} stk**")
+        st.caption(f"→ doserer klor fra {current_cl:.1f} mg/l til {new_cl:.1f} mg/l")
 
 st.subheader("Vedligehold - Tempo Sticks (5-7 dage)")
 
