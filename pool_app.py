@@ -28,11 +28,11 @@ st.title("Pool Dosering - HTH Briquetter & Tempo Sticks")
 st.header("Pool")
 col1, col2, col3 = st.columns([3, 2, 1.5])
 with col1:
-    new_name = st.text_input("Nyt pool-navn", key="new_pool_name")
+    new_name = st.text_input("Nyt pool-navn")
 with col2:
-    new_vol = st.number_input("Volumen (m³)", min_value=5.0, value=45.0, step=1.0, key="new_vol")
+    new_vol = st.number_input("Volumen (m³)", min_value=5.0, value=45.0, step=1.0)
 with col3:
-    if st.button("Tilføj", use_container_width=True):
+    if st.button("Tilføj"):
         if new_name.strip():
             pools[new_name.strip()] = new_vol
             save_pools()
@@ -63,7 +63,8 @@ st.markdown(
     - Tempo Sticks skal altid placeres i KLORINATOREN eller i SKIMMEREN via en Tempo Stick Dispenser - aldrig direkte i skimmeren eller poolen!<br>
     - Ved eksisterende sticks skal du vælge 1 eller 2
     </div>
-    """
+    """,
+    unsafe_allow_html=True
 )
 
 has_existing_stick = st.checkbox("Der ligger allerede Tempo Stick(s) i poolen (min. 0.5 stick tilbage)", value=False)
