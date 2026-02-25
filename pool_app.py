@@ -16,7 +16,10 @@ SHEET_ID = "1J7hqPcK7rpRwrjaYAhKh5jDpk8tNYKhfM3_7FWCY2rA"
 WORKSHEET_NAME = "Sheet1"  # Ændr til "Ark1" hvis dit ark hedder det på dansk
 
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
+
+# Brug Streamlit Secrets til credentials (indsat i Manage app → Secrets)
+creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["gcp_service_account"], scope)
+
 client = gspread.authorize(creds)
 sheet = client.open_by_key(SHEET_ID).worksheet(WORKSHEET_NAME)
 
@@ -44,7 +47,7 @@ pools, pool_info = load_pools()
 
 # Tilføj ny pool til Sheet
 def add_pool(name, vol):
-    sheet.append_row([name, vol, "", ""])  # Adresse = Pool Navn, Pumpetype tom
+    sheet.append_row([name, vol, name, ""])  # Adresse = Pool Navn, Pumpetype tom
 
 st.set_page_config(page_title="Pool Dosering", layout="wide")
 
