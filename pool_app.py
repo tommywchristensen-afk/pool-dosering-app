@@ -79,7 +79,7 @@ colA, colB = st.columns(2)
 with colA:
     current_ph = st.number_input("Nuværende pH", 0.0, 14.0, 7.5, 0.1)
 with colB:
-    current_cl = st.number_input("Nuværende frit klor (mg/l)", 0.0, 10.0, 1.5, 0.1)
+    current_cl = st.number_input("Nuværende frit klor (mg/l)", 0.0, 20.0, 1.5, 0.1)  # øget max til 20
 
 st.markdown(
     """
@@ -105,7 +105,11 @@ if has_existing_stick:
     )
     if existing_sticks is None:
         st.markdown(
-            '<div class="warning"><strong>Fejl:</strong> Du skal vælge 1 eller 2 eksisterende Tempo Sticks for at fortsætte.</div>',
+            """
+            <div class="warning">
+            <strong>Fejl:</strong> Du skal vælge 1 eller 2 eksisterende Tempo Sticks for at fortsætte.
+            </div>
+            """,
             unsafe_allow_html=True
         )
 
@@ -134,14 +138,16 @@ if delta_cl_maint > 0:
 
 delta_ph_eff = delta_ph + ph_rise_from_sticks
 
+# Antiklor hvis klor > 6 mg/l
+delta_cl_lower = max(0, current_cl - target_cl_leave)  # hvor meget skal sænkes til 4 mg/l
+
 st.markdown(
     """
     <div class="alert-box">
     <strong>GØR DETTE FØRST - trin for trin</strong><br><br>
     1. Juster pH først (opløs Saniklar PH Minus i en spand med poolvand og tilsæt blandingen langsomt, gerne ud for dyserne)<br>
     2. Tilsæt HTH Briquetter/Daytabs hvis nødvendigt for at nå ~4 mg/l ved afgang fra poolhus.<br>
-    3. Tilsæt Tempo Sticks i KLORINATOREN eller SKIMMERKURVEN via en Tempo Stick Dispenser (kun hvis der ingen Tempo Sticks er i forvejen og huset er udlejet)<br>
-    4. Mål igen før I kører: <strong>pH ≈7,0</strong> | <strong>klor ≈4 mg/l</strong>
+    3. Tilsæt Tempo Sticks i KLORINATOREN eller SKIMMERKURVEN via en Tempo Stick Dispenser (kun hvis der ingen Tempo Sticks er i forvejen og huset er udlejet)
     </div>
     """,
     unsafe_allow_html=True
@@ -160,19 +166,37 @@ else:
     st.subheader(f"Hæv pH med {-delta_ph_eff:.2f}")
     st.markdown(f"**pH-plus → {ml_plus:.0f} ml**")
 
-if delta_cl_leave < 0.3:
-    st.info("Klor OK ved afgang - ingen Briquetter/Daytabs nødvendige")
+if current_cl > 6.0:
+    # Antiklor hvis klor > 6
+    mg_to_lower = current_cl - target_cl_leave  # hvor meget skal sænkes
+    antiklor_per_m3_per_mg = 0.83
+    antiklor_total = antiklor_per_m3_per_mg * mg_to_lower * volume
+    
+    st.subheader(f"Sænkning af klor (for højt: {current_cl:.1f} mg/l)")
+    st.markdown(f"**Anti-klor: {antiklor_total:.0f} gram/ml**")
+    st.caption(f"→ sænker klor fra {current_cl:.1f} mg/l til {target_cl_leave} mg/l")
+    st.warning("Vent 1-2 timer efter antiklor, mål igen før yderligere klor-tilsætning!")
 else:
-    briqs = 0.21 * delta_cl_leave * volume
-    briqs_round = round(briqs)
-    st.subheader(f"Opkloring til {target_cl_leave} mg/l ved afgang")
-    st.markdown(f"**HTH Briquetter/Daytabs: {briqs:.1f} stk → afrund til {briqs_round} stk**")
+    if delta_cl_leave < 0.3:
+        st.info("Klor OK ved afgang - ingen Briquetter/Daytabs nødvendige")
+    else:
+        briqs = 0.21 * delta_cl_leave * volume
+        briqs_round = round(briqs)
+        new_cl = current_cl + delta_cl_leave
+        
+        st.subheader(f"Opkloring til {target_cl_leave} mg/l ved afgang")
+        st.markdown(f"**HTH Briquetter/Daytabs: {briqs:.1f} stk → afrund til {briqs_round} stk**")
+        st.caption(f"→ doserer klor fra {current_cl:.1f} mg/l til {new_cl:.1f} mg/l")
 
 st.subheader("Vedligehold - Tempo Sticks (5-7 dage)")
 
 if has_existing_stick and existing_sticks is None:
     st.markdown(
-        '<div class="warning"><strong>Fejl:</strong> Du skal vælge 1 eller 2 eksisterende Tempo Sticks for at fortsætte.</div>',
+        """
+        <div class="warning">
+        <strong>Fejl:</strong> Du skal vælge 1 eller 2 eksisterende Tempo Sticks for at fortsætte.
+        </div>
+        """,
         unsafe_allow_html=True
     )
     st.info("Vedligeholdelsesforslag vises først når antal eksisterende sticks er valgt.")
@@ -184,11 +208,9 @@ else:
     elif sticks_needed == 0:
         st.info("Ingen nye Tempo Sticks nødvendige")
     else:
-        # FØRST antallet og effekt
+        added_cl = sticks_needed * 8.0 * (25.0 / volume)
         st.markdown(f"**HTH Tempo Sticks: {sticks_needed:.0f} stk**")
-        st.caption(f"(giver ca. +{delta_cl_maint:.1f} mg/l og +{ph_rise_from_sticks:.2f} pH-stigning)")
-
-        # Derefter placeringsteksten
+        st.caption(f"→ giver ca. +{added_cl:.1f} mg/l klor og +{ph_rise_from_sticks:.2f} pH-stigning")
         st.caption("Tempo Sticks skal altid placeres i KLORINATOREN eller i SKIMMEREN via en Tempo Stick Dispenser - aldrig direkte i skimmeren eller poolen!")
 
 can_log = not (has_existing_stick and existing_sticks is None)
@@ -221,7 +243,7 @@ if st.button(
         save_logs()
         st.success("Logget!")
 
-# Download-knap – altid synlig når der er data
+# Download-knap
 if selected in logs and logs[selected]:
     df = pd.DataFrame(logs[selected])
     csv = df.to_csv(index=False, encoding="utf-8-sig").encode("utf-8-sig")
