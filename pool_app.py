@@ -1,3 +1,9 @@
+# Copyright © 2026 Tommy Christensen, Laur Larsensgade 13, STTH, 4800 Nykøbing F.
+# E-mail: tommywchristensen@gmail.com
+# Denne kode og det tilhørende koncept er udviklet til privat brug for service teknikere ansat hos Sol og Strand.
+# Alle rettigheder forbeholdes. Må ikke kopieres, distribueres, modificeres, sælges eller på anden måde anvendes
+# kommercielt eller deles offentligt uden skriftlig tilladelse fra ophavsmanden.
+
 import streamlit as st
 import json
 import os
@@ -45,6 +51,15 @@ st.markdown("""
     .warning { background-color: #f8d7da; color: #721c24; padding: 1rem; border-radius: 6px; margin: 1rem 0; border: 1px solid #f5c6cb; }
     .stButton > button:disabled { opacity: 0.6; cursor: not-allowed; }
     .stDownloadButton > button { font-size: 1.2rem !important; padding: 1rem !important; }
+    .copyright { 
+        font-size: 0.85rem; 
+        color: #666; 
+        text-align: center; 
+        margin-top: 2rem; 
+        padding: 1rem; 
+        border-top: 1px solid #eee; 
+        background-color: #f9f9f9; 
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -79,7 +94,7 @@ colA, colB = st.columns(2)
 with colA:
     current_ph = st.number_input("Nuværende pH", 0.0, 14.0, 7.5, 0.1)
 with colB:
-    current_cl = st.number_input("Nuværende frit klor (mg/l)", 0.0, 20.0, 1.5, 0.1)  # øget max til 20
+    current_cl = st.number_input("Nuværende frit klor (mg/l)", 0.0, 20.0, 1.5, 0.1)
 
 st.markdown(
     """
@@ -138,9 +153,6 @@ if delta_cl_maint > 0:
 
 delta_ph_eff = delta_ph + ph_rise_from_sticks
 
-# Antiklor hvis klor > 6 mg/l
-delta_cl_lower = max(0, current_cl - target_cl_leave)  # hvor meget skal sænkes til 4 mg/l
-
 st.markdown(
     """
     <div class="alert-box">
@@ -166,27 +178,16 @@ else:
     st.subheader(f"Hæv pH med {-delta_ph_eff:.2f}")
     st.markdown(f"**pH-plus → {ml_plus:.0f} ml**")
 
-if current_cl > 6.0:
-    # Antiklor hvis klor > 6
-    mg_to_lower = current_cl - target_cl_leave  # hvor meget skal sænkes
-    antiklor_per_m3_per_mg = 0.83
-    antiklor_total = antiklor_per_m3_per_mg * mg_to_lower * volume
-    
-    st.subheader(f"Sænkning af klor (for højt: {current_cl:.1f} mg/l)")
-    st.markdown(f"**Anti-klor: {antiklor_total:.0f} gram/ml**")
-    st.caption(f"→ sænker klor fra {current_cl:.1f} mg/l til {target_cl_leave} mg/l")
-    st.warning("Vent 1-2 timer efter antiklor, mål igen før yderligere klor-tilsætning!")
+if delta_cl_leave < 0.3:
+    st.info("Klor OK ved afgang - ingen Briquetter/Daytabs nødvendige")
 else:
-    if delta_cl_leave < 0.3:
-        st.info("Klor OK ved afgang - ingen Briquetter/Daytabs nødvendige")
-    else:
-        briqs = 0.21 * delta_cl_leave * volume
-        briqs_round = round(briqs)
-        new_cl = current_cl + delta_cl_leave
-        
-        st.subheader(f"Opkloring til {target_cl_leave} mg/l ved afgang")
-        st.markdown(f"**HTH Briquetter/Daytabs: {briqs:.1f} stk → afrund til {briqs_round} stk**")
-        st.caption(f"→ doserer klor fra {current_cl:.1f} mg/l til {new_cl:.1f} mg/l")
+    briqs = 0.21 * delta_cl_leave * volume
+    briqs_round = round(briqs)
+    new_cl = current_cl + delta_cl_leave
+    
+    st.subheader(f"Opkloring til {target_cl_leave} mg/l ved afgang")
+    st.markdown(f"**HTH Briquetter/Daytabs: {briqs:.1f} stk → afrund til {briqs_round} stk**")
+    st.caption(f"→ doserer klor fra {current_cl:.1f} mg/l til {new_cl:.1f} mg/l")
 
 st.subheader("Vedligehold - Tempo Sticks (5-7 dage)")
 
@@ -265,3 +266,17 @@ else:
     st.info("Ingen målinger gemt endnu for denne pool – tryk 'Gem måling + dosering i log' når du har indtastet data.")
 
 st.caption("Alle målinger gemmes automatisk lokalt i 'logs.json' i samme mappe som appen. Du kan altid downloade som CSV ovenfor.")
+
+# Copyright og rettighedsnotits – synlig i bunden
+st.markdown(
+    """
+    <div class="copyright">
+    © 2026 Tommy Christensen, Laur Larsensgade 13, STTH, 4800 Nykøbing F.<br>
+    E-mail: tommywchristensen@gmail.com<br>
+    Denne applikation og dens koncept er udviklet til brug for service teknikere ansat hos Sol og Strand.<br>
+    Alle rettigheder forbeholdes. Må ikke kopieres, distribueres, modificeres, sælges eller på anden måde anvendes<br>
+    kommercielt eller deles offentligt uden skriftlig tilladelse fra ophavsmanden.
+    </div>
+    """,
+    unsafe_allow_html=True
+)
