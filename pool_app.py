@@ -36,70 +36,79 @@ def save_logs():
 st.set_page_config(page_title="Pool Dosering", layout="wide")
 
 # ────────────────────────────────────────────────
-# Dark mode / light mode – automatisk tilpasning + mørkere i dark mode
+# Forbedret farvehåndtering – høj kontrast i både light og dark mode
 # ────────────────────────────────────────────────
 
 st.markdown("""
     <style>
-    /* Basis farver - Streamlit skifter automatisk */
+    /* Basis variabler – Streamlit opdaterer automatisk */
     :root {
         --bg-color: var(--background-color, #ffffff);
         --text-color: var(--text-color, #000000);
         --primary: var(--primary-color, #ff4b4b);
-        --warning-bg: #f8d7da;
-        --warning-text: #721c24;
-        --copyright-bg: #f9f9f9;
-        --copyright-text: #666666;
+        --secondary-text: #333333;
+        --light-bg: #f8f9fa;
+        --border: #dee2e6;
     }
 
-    /* Tving mørkere dark mode på telefoner */
-    [data-testid="stAppViewContainer"] {
+    /* Dark mode override – sikrer høj kontrast */
+    [data-testid="stAppViewContainer"][style*="background-color: rgb(14, 17, 23)"] {
+        background-color: #0e1117 !important;
+        color: #e0e0e0 !important;
+    }
+
+    body, [data-testid="stAppViewContainer"] {
         background-color: var(--bg-color) !important;
         color: var(--text-color) !important;
     }
 
-    /* Ekstra mørk baggrund i dark mode */
-    body, [data-testid="stAppViewContainer"] {
-        background-color: #0e1117 !important;  /* mørk grå-sort */
-        color: #e0e0e0 !important;
-    }
-
-    .stApp > header {
-        background-color: #0e1117 !important;
-    }
-
+    /* Alert-box – god læsbarhed i begge modes */
     .alert-box {
-        background-color: #4a3c0b !important;  /* mørk gul */
-        border-left: 6px solid #ffcc00 !important;
-        color: #fffacd !important;
+        background-color: #fff8e1 !important;          /* lys gul i light */
+        border-left: 6px solid #ffb300 !important;
+        color: #5d4037 !important;                     /* mørk brun tekst */
         padding: 1.2rem;
         margin: 1rem 0;
         border-radius: 6px;
     }
 
+    /* Guidance – høj kontrast */
     .guidance {
         color: var(--text-color);
+        background-color: var(--light-bg);
+        padding: 0.8rem;
+        border-radius: 4px;
+        border: 1px solid var(--border);
         font-size: 1.05rem;
-        margin-bottom: 0.8rem;
+        margin-bottom: 1rem;
     }
 
+    /* Warning – høj kontrast i begge modes */
     .warning {
-        background-color: #3d1f1f !important;
-        color: #ffcccc !important;
-        border: 1px solid #990000 !important;
+        background-color: #ffebee !important;          /* lys rød i light */
+        color: #b71c1c !important;                     /* mørk rød tekst */
+        border: 1px solid #ef9a9a !important;
         padding: 1rem;
         border-radius: 6px;
         margin: 1rem 0;
     }
 
+    /* Copyright footer – god læsbarhed */
     .copyright {
         font-size: 0.85rem;
-        color: #bbbbbb !important;
+        color: #555 !important;                        /* mørkegrå i light */
         text-align: center;
         margin-top: 2rem;
         padding: 1rem;
-        border-top: 1px solid #444 !important;
+        border-top: 1px solid #ddd;
+        background-color: #f5f5f5 !important;
+    }
+
+    /* Dark mode tilpasninger til footer og copyright */
+    [data-testid="stAppViewContainer"][style*="background-color: rgb(14, 17, 23)"] .copyright {
+        color: #bbbbbb !important;
         background-color: #1a1d24 !important;
+        border-top: 1px solid #444 !important;
     }
 
     .stButton > button {
