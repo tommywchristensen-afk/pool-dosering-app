@@ -1,6 +1,6 @@
 # Copyright © 2026 Tommy Christensen, Laur Larsensgade 13, STTH, 4800 Nykøbing F.
 # E-mail: tommywchristensen@gmail.com
-# Denne kode og det tilhørende koncept er udviklet til privat brug for service teknikere ansat hos Sol og Strand.
+# Denne kode og det tilhørende koncept er udviklet til brug for service-teknikere ansat hos Sol og Strand.
 # Alle rettigheder forbeholdes. Må ikke kopieres, distribueres, modificeres, sælges eller på anden måde anvendes
 # kommercielt eller deles offentligt uden skriftlig tilladelse fra ophavsmanden.
 
@@ -35,30 +35,80 @@ def save_logs():
 
 st.set_page_config(page_title="Pool Dosering", layout="wide")
 
+# ────────────────────────────────────────────────
+# Automatisk dark/light mode tilpasning via Streamlit variabler
+# ────────────────────────────────────────────────
+
 st.markdown("""
     <style>
-    .big-button { font-size: 1.2rem !important; padding: 0.8rem 1.5rem !important; margin: 0.5rem 0 !important; }
+    /* Basis farver – Streamlit skifter automatisk i dark mode */
+    :root {
+        --bg-color: var(--background-color, #ffffff);
+        --text-color: var(--text-color, #000000);
+        --primary: var(--primary-color, #ff4b4b);
+        --warning-bg: #f8d7da;
+        --warning-text: #721c24;
+        --copyright-bg: #f9f9f9;
+        --copyright-text: #666666;
+    }
+
+    body, [data-testid="stAppViewContainer"] {
+        background-color: var(--bg-color) !important;
+        color: var(--text-color) !important;
+    }
+
+    .stApp > header {
+        background-color: var(--bg-color) !important;
+    }
+
     .alert-box {
-        background-color: #fff3cd;
-        border-left: 6px solid #ffc107;
+        background-color: #fff3cd !important;
+        border-left: 6px solid #ffc107 !important;
+        color: #664d03 !important;
         padding: 1.2rem;
         margin: 1rem 0;
         border-radius: 6px;
-        font-size: 1.15rem;
-        color: #664d03;
     }
-    .guidance { font-size: 1.05rem; color: #444; margin-bottom: 0.8rem; }
-    .warning { background-color: #f8d7da; color: #721c24; padding: 1rem; border-radius: 6px; margin: 1rem 0; border: 1px solid #f5c6cb; }
-    .stButton > button:disabled { opacity: 0.6; cursor: not-allowed; }
-    .stDownloadButton > button { font-size: 1.2rem !important; padding: 1rem !important; }
-    .copyright { 
-        font-size: 0.85rem; 
-        color: #666; 
-        text-align: center; 
-        margin-top: 2rem; 
-        padding: 1rem; 
-        border-top: 1px solid #eee; 
-        background-color: #f9f9f9; 
+
+    .guidance {
+        color: var(--text-color);
+        font-size: 1.05rem;
+        margin-bottom: 0.8rem;
+    }
+
+    .warning {
+        background-color: var(--warning-bg) !important;
+        color: var(--warning-text) !important;
+        border: 1px solid #f5c6cb !important;
+        padding: 1rem;
+        border-radius: 6px;
+        margin: 1rem 0;
+    }
+
+    .copyright {
+        font-size: 0.85rem;
+        color: var(--copyright-text);
+        text-align: center;
+        margin-top: 2rem;
+        padding: 1rem;
+        border-top: 1px solid #eee;
+        background-color: var(--copyright-bg);
+    }
+
+    .stButton > button {
+        width: 100%;
+        font-size: 1.15rem;
+        padding: 0.8rem;
+    }
+
+    .stButton > button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .stDownloadButton > button {
+        font-size: 1.2rem !important;
+        padding: 1rem !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -267,13 +317,13 @@ else:
 
 st.caption("Alle målinger gemmes automatisk lokalt i 'logs.json' i samme mappe som appen. Du kan altid downloade som CSV ovenfor.")
 
-# Copyright og rettighedsnotits – synlig i bunden
+# Copyright i bunden
 st.markdown(
     """
     <div class="copyright">
     © 2026 Tommy Christensen, Laur Larsensgade 13, STTH, 4800 Nykøbing F.<br>
     E-mail: tommywchristensen@gmail.com<br>
-    Denne applikation og dens koncept er udviklet til brug for service teknikere ansat hos Sol og Strand.<br>
+    Denne applikation og dens koncept er udviklet til brug for service-teknikere ansat hos Sol og Strand.<br>
     Alle rettigheder forbeholdes. Må ikke kopieres, distribueres, modificeres, sælges eller på anden måde anvendes<br>
     kommercielt eller deles offentligt uden skriftlig tilladelse fra ophavsmanden.
     </div>
