@@ -5,61 +5,89 @@
 # kommercielt eller deles offentligt uden skriftlig tilladelse fra ophavsmanden.
 
 import streamlit as st
-import json
-import os
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
 
-POOL_FILE = "pools.json"
+# ────────────────────────────────────────────────
+# Google Sheets opsætning – DIT SHEET-ID
+# ────────────────────────────────────────────────
 
-if os.path.exists(POOL_FILE):
-    with open(POOL_FILE, "r", encoding="utf-8") as f:
-        pools = json.load(f)
-else:
+SHEET_ID = "1J7hqPcK7rpRwrjaYAhKh5jDpk8tNYKhfM3_7FWCY2rA"
+WORKSHEET_NAME = "Sheet1"  # Ændr til "Ark1" hvis dit ark hedder det på dansk
+
+scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
+client = gspread.authorize(creds)
+sheet = client.open_by_key(SHEET_ID).worksheet(WORKSHEET_NAME)
+
+# Hent pools fra Sheet
+def load_pools():
+    records = sheet.get_all_records()
     pools = {}
+    pool_info = {}
+    for row in records:
+        name = row.get("Pool Navn", "").strip()
+        if name:
+            vol_str = row.get("Volumen (m3)", "0")
+            try:
+                vol = float(vol_str)
+            except (ValueError, TypeError):
+                vol = 0.0
+            pools[name] = vol
+            pool_info[name] = {
+                "Adresse": row.get("Adresse", "Ukendt"),
+                "Pumpetype": row.get("Pumpetype", "Ukendt")
+            }
+    return pools, pool_info
 
-def save_pools():
-    with open(POOL_FILE, "w", encoding="utf-8") as f:
-        json.dump(pools, f, ensure_ascii=False, indent=2)
+pools, pool_info = load_pools()
+
+# Tilføj ny pool til Sheet
+def add_pool(name, vol):
+    sheet.append_row([name, vol, "", ""])  # Adresse = Pool Navn, Pumpetype tom
 
 st.set_page_config(page_title="Pool Dosering", layout="wide")
 
 st.title("Pool Dosering - HTH Briquetter & Tempo Sticks")
 
-# Pool valg / tilføj
+# Pool valg / tilføj ny pool
 st.header("Pool")
-col1, col2, col3 = st.columns([3, 2, 1.5])
+col1, col2 = st.columns([3, 2])
 with col1:
-    new_name = st.text_input("Nyt pool-navn")
+    new_name = st.text_input("Her har du mulighed for at tilføje en ny pool")
 with col2:
-    new_vol = st.number_input("Volumen (m³)", min_value=5.0, value=45.0, step=1.0)
-with col3:
-    if st.button("Tilføj"):
-        if new_name.strip():
-            pools[new_name.strip()] = new_vol
-            save_pools()
-            st.success(f"{new_name.strip()} tilføjet")
-            st.rerun()
+    new_vol = st.number_input("Volumen (m³)", min_value=0.0, value=0.0, step=1.0)
+
+if st.button("Tilføj ny pool til listen"):
+    if new_name.strip():
+        add_pool(new_name.strip(), new_vol)
+        st.success(f"{new_name.strip()} tilføjet til Google Sheet (Adresse sat til samme som navn)")
+        st.rerun()  # Opdater listen fra Sheet
 
 pool_list = list(pools.keys())
 if pool_list:
-    selected = st.selectbox("Vælg pool", pool_list)
+    selected = st.selectbox("Vælg pool fra listen", pool_list)
     volume = pools[selected]
+    info = pool_info.get(selected, {})
+    st.caption(f"**{selected} – {volume:.1f} m³**")
+    st.caption(f"Adresse: {info.get('Adresse', 'Ikke angivet')} | Pumpetype: {info.get('Pumpetype', 'Ikke angivet')}")
 else:
-    st.info("Tilføj en pool først")
+    st.info("Ingen pools fundet i Google Sheet – tilføj nogle i Sheetet først")
     st.stop()
 
 st.header(f"{selected} - {volume:.1f} m³")
 
 colA, colB = st.columns(2)
 with colA:
-    current_ph = st.number_input("Nuværende pH", 0.0, 14.0, 7.5, 0.1)
+    current_ph = st.number_input("Nuværende pH", min_value=0.0, value=0.0, step=0.1)
 with colB:
-    current_cl = st.number_input("Nuværende frit klor (mg/l)", 0.0, 20.0, 1.5, 0.1)
+    current_cl = st.number_input("Nuværende frit klor (mg/l)", min_value=0.0, value=0.0, step=0.1)
 
 st.markdown(
     """
     <div style="font-size: 1.05rem; color: #444; margin-bottom: 0.8rem;">
     <strong>Vigtigt om Tempo Sticks:</strong><br>
-    - Vælg kun feltet hvis der er mindst 0.5 stick tilbage<br>
+    - Afkryds kun feltet hvis der er mindst 0.5 stick tilbage<br>
     - Tempo Sticks skal altid placeres i KLORINATOREN eller i SKIMMEREN via en Tempo Stick Dispenser - aldrig direkte i skimmeren eller poolen!<br>
     - Ved eksisterende sticks skal du vælge 1 eller 2
     </div>
