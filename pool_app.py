@@ -7,11 +7,8 @@
 import streamlit as st
 import json
 import os
-import pandas as pd
-from datetime import datetime
 
 POOL_FILE = "pools.json"
-LOG_FILE = "logs.json"
 
 if os.path.exists(POOL_FILE):
     with open(POOL_FILE, "r", encoding="utf-8") as f:
@@ -19,19 +16,9 @@ if os.path.exists(POOL_FILE):
 else:
     pools = {}
 
-if os.path.exists(LOG_FILE):
-    with open(LOG_FILE, "r", encoding="utf-8") as f:
-        logs = json.load(f)
-else:
-    logs = {}
-
 def save_pools():
     with open(POOL_FILE, "w", encoding="utf-8") as f:
         json.dump(pools, f, ensure_ascii=False, indent=2)
-
-def save_logs():
-    with open(LOG_FILE, "w", encoding="utf-8") as f:
-        json.dump(logs, f, ensure_ascii=False, indent=2)
 
 st.set_page_config(page_title="Pool Dosering", layout="wide")
 
@@ -194,59 +181,6 @@ else:
         st.markdown(f"**HTH Tempo Sticks: {sticks_needed:.0f} stk**")
         st.caption(f"→ giver ca. +{added_cl:.1f} mg/l klor og +{ph_rise_from_sticks:.2f} pH-stigning")
         st.caption("Tempo Sticks skal altid placeres i KLORINATOREN eller i SKIMMEREN via en Tempo Stick Dispenser - aldrig direkte i skimmeren eller poolen!")
-
-can_log = not (has_existing_stick and existing_sticks is None)
-
-if st.button(
-    "Gem måling + dosering i log",
-    type="primary",
-    use_container_width=True,
-    disabled=not can_log
-):
-    if not can_log:
-        st.error("Kan ikke gemme før antal eksisterende Tempo Sticks er valgt (1 eller 2).")
-    else:
-        now = datetime.now().strftime("%Y-%m-%d %H:%M")
-        entry = {
-            "Dato": now,
-            "Pool": selected,
-            "pH": current_ph,
-            "Klor nu": current_cl,
-            "Udlejet": leased,
-            "Eksisterende sticks": existing_sticks if has_existing_stick else 0,
-            "Nye sticks": sticks_needed if not has_existing_stick else 0,
-            "Briquetter/Daytabs": round(briqs) if delta_cl_leave >= 0.3 else 0,
-            "pH delta": round(delta_ph_eff, 2)
-        }
-
-        if selected not in logs:
-            logs[selected] = []
-        logs[selected].append(entry)
-        save_logs()
-        st.success("Logget!")
-
-# Download-knap
-if selected in logs and logs[selected]:
-    df = pd.DataFrame(logs[selected])
-    csv = df.to_csv(index=False, encoding="utf-8-sig").encode("utf-8-sig")
-
-    st.download_button(
-        label="Download hele loggen for denne pool som CSV (Excel)",
-        data=csv,
-        file_name=f"{selected}_pool_log_{datetime.now().strftime('%Y%m%d')}.csv",
-        mime="text/csv",
-        use_container_width=True,
-        key="download_full_log",
-        help="Gem filen på din computer – åbn i Excel eller Google Sheets"
-    )
-
-    st.subheader("Seneste målinger (vises her)")
-    st.dataframe(df.tail(10).iloc[::-1], use_container_width=True)
-
-else:
-    st.info("Ingen målinger gemt endnu for denne pool – tryk 'Gem måling + dosering i log' når du har indtastet data.")
-
-st.caption("Alle målinger gemmes automatisk lokalt i 'logs.json' i samme mappe som appen. Du kan altid downloade som CSV ovenfor.")
 
 # Copyright i bunden
 st.markdown(
