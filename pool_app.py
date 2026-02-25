@@ -1,0 +1,245 @@
+import streamlit as st
+import json
+import os
+import pandas as pd
+from datetime import datetime
+
+POOL_FILE = "pools.json"
+LOG_FILE = "logs.json"
+
+if os.path.exists(POOL_FILE):
+    with open(POOL_FILE, "r", encoding="utf-8") as f:
+        pools = json.load(f)
+else:
+    pools = {}
+
+if os.path.exists(LOG_FILE):
+    with open(LOG_FILE, "r", encoding="utf-8") as f:
+        logs = json.load(f)
+else:
+    logs = {}
+
+def save_pools():
+    with open(POOL_FILE, "w", encoding="utf-8") as f:
+        json.dump(pools, f, ensure_ascii=False, indent=2)
+
+def save_logs():
+    with open(LOG_FILE, "w", encoding="utf-8") as f:
+        json.dump(logs, f, ensure_ascii=False, indent=2)
+
+st.set_page_config(page_title="Pool Dosering", layout="wide")
+
+st.markdown("""
+    <style>
+    .big-button { font-size: 1.2rem !important; padding: 0.8rem 1.5rem !important; margin: 0.5rem 0 !important; }
+    .alert-box {
+        background-color: #fff3cd;
+        border-left: 6px solid #ffc107;
+        padding: 1.2rem;
+        margin: 1rem 0;
+        border-radius: 6px;
+        font-size: 1.15rem;
+        color: #664d03;
+    }
+    .guidance { font-size: 1.05rem; color: #444; margin-bottom: 0.8rem; }
+    .warning { background-color: #f8d7da; color: #721c24; padding: 1rem; border-radius: 6px; margin: 1rem 0; border: 1px solid #f5c6cb; }
+    .stButton > button:disabled { opacity: 0.6; cursor: not-allowed; }
+    .stDownloadButton > button { font-size: 1.2rem !important; padding: 1rem !important; }
+    </style>
+""", unsafe_allow_html=True)
+
+st.title("Pool Dosering - HTH Briquetter & Tempo Sticks")
+
+# Pool valg / tilføj
+st.header("Pool")
+col1, col2, col3 = st.columns([3, 2, 1.5])
+with col1:
+    new_name = st.text_input("Nyt pool-navn", key="new_pool_name")
+with col2:
+    new_vol = st.number_input("Volumen (m³)", min_value=5.0, value=45.0, step=1.0, key="new_vol")
+with col3:
+    if st.button("Tilføj", use_container_width=True):
+        if new_name.strip():
+            pools[new_name.strip()] = new_vol
+            save_pools()
+            st.success(f"{new_name.strip()} tilføjet")
+            st.rerun()
+
+pool_list = list(pools.keys())
+if pool_list:
+    selected = st.selectbox("Vælg pool", pool_list)
+    volume = pools[selected]
+else:
+    st.info("Tilføj en pool først")
+    st.stop()
+
+st.header(f"{selected} - {volume:.1f} m³")
+
+colA, colB = st.columns(2)
+with colA:
+    current_ph = st.number_input("Nuværende pH", 0.0, 14.0, 7.5, 0.1)
+with colB:
+    current_cl = st.number_input("Nuværende frit klor (mg/l)", 0.0, 10.0, 1.5, 0.1)
+
+st.markdown(
+    """
+    <div class="guidance">
+    <strong>Vigtigt om Tempo Sticks:</strong><br>
+    - Vælg kun feltet hvis der er mindst 0.5 stick tilbage<br>
+    - Tempo Sticks skal altid placeres i KLORINATOREN eller i SKIMMEREN via en Tempo Stick Dispenser - aldrig direkte i skimmeren eller poolen!<br>
+    - Ved eksisterende sticks skal du vælge 1 eller 2
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
+has_existing_stick = st.checkbox("Der ligger allerede Tempo Stick(s) i poolen (min. 0.5 stick tilbage)", value=False)
+
+existing_sticks = None
+if has_existing_stick:
+    existing_sticks = st.selectbox(
+        "Antal eksisterende Tempo Sticks",
+        options=[1, 2],
+        index=0,
+        help="Du skal vælge 1 eller 2 – 0 er ikke muligt når feltet er afkrydset"
+    )
+    if existing_sticks is None:
+        st.markdown(
+            '<div class="warning"><strong>Fejl:</strong> Du skal vælge 1 eller 2 eksisterende Tempo Sticks for at fortsætte.</div>',
+            unsafe_allow_html=True
+        )
+
+leased = st.radio("Husets status", ["Ikke udlejet", "Udlejet"], horizontal=True)
+
+target_ph = 7.0
+target_cl_leave = 4.0
+target_cl_maintenance = 5.5 if leased == "Udlejet" else 3.8
+
+delta_ph = current_ph - target_ph
+delta_cl_leave = max(0, target_cl_leave - current_cl)
+
+delta_cl_maint = 0.0
+if not has_existing_stick and leased == "Udlejet":
+    delta_cl_maint = max(0, target_cl_maintenance - current_cl)
+
+ph_rise_from_sticks = 0.0
+sticks_needed = 0.0
+
+if delta_cl_maint > 0:
+    klor_per_stick_25m3 = 8.0
+    raise_here = klor_per_stick_25m3 * (25.0 / volume)
+    sticks_needed = delta_cl_maint / raise_here
+    sticks_needed = round(sticks_needed)
+    ph_rise_from_sticks = 0.4 * sticks_needed * (25.0 / volume)
+
+delta_ph_eff = delta_ph + ph_rise_from_sticks
+
+st.markdown(
+    """
+    <div class="alert-box">
+    <strong>GØR DETTE FØRST - trin for trin</strong><br><br>
+    1. Juster pH først (opløs Saniklar PH Minus i en spand med poolvand og tilsæt blandingen langsomt, gerne ud for dyserne)<br>
+    2. Tilsæt HTH Briquetter/Daytabs hvis nødvendigt for at nå ~4 mg/l ved afgang fra poolhus.<br>
+    3. Tilsæt Tempo Sticks i KLORINATOREN eller SKIMMERKURVEN via en Tempo Stick Dispenser (kun hvis der ingen Tempo Sticks er i forvejen og huset er udlejet)<br>
+    4. Mål igen før I kører: <strong>pH ≈7,0</strong> | <strong>klor ≈4 mg/l</strong>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
+st.header("Anbefalet dosering")
+
+if abs(delta_ph_eff) < 0.05:
+    st.success("pH ser fin ud - ingen justering nødvendig")
+elif delta_ph_eff > 0:
+    ml_minus = 35 * delta_ph_eff * volume
+    st.subheader(f"Sænk pH med {delta_ph_eff:.2f}")
+    st.markdown(f"**pH-minus → {ml_minus:.0f} ml**")
+else:
+    ml_plus = 49 * (-delta_ph_eff) * volume
+    st.subheader(f"Hæv pH med {-delta_ph_eff:.2f}")
+    st.markdown(f"**pH-plus → {ml_plus:.0f} ml**")
+
+if delta_cl_leave < 0.3:
+    st.info("Klor OK ved afgang - ingen Briquetter/Daytabs nødvendige")
+else:
+    briqs = 0.21 * delta_cl_leave * volume
+    briqs_round = round(briqs)
+    st.subheader(f"Opkloring til {target_cl_leave} mg/l ved afgang")
+    st.markdown(f"**HTH Briquetter/Daytabs: {briqs:.1f} stk → afrund til {briqs_round} stk**")
+
+st.subheader("Vedligehold - Tempo Sticks (5-7 dage)")
+
+if has_existing_stick and existing_sticks is None:
+    st.markdown(
+        '<div class="warning"><strong>Fejl:</strong> Du skal vælge 1 eller 2 eksisterende Tempo Sticks for at fortsætte.</div>',
+        unsafe_allow_html=True
+    )
+    st.info("Vedligeholdelsesforslag vises først når antal eksisterende sticks er valgt.")
+else:
+    if has_existing_stick:
+        st.info(f"Der ligger allerede {existing_sticks} stk → ingen nye sticks foreslået")
+    elif leased == "Ikke udlejet":
+        st.info("Huset er ikke udlejet → ingen Tempo Sticks - kun Briquetter/Daytabs til 3-4 mg/l")
+    elif sticks_needed == 0:
+        st.info("Ingen nye Tempo Sticks nødvendige")
+    else:
+        # FØRST antallet og effekt
+        st.markdown(f"**HTH Tempo Sticks: {sticks_needed:.0f} stk**")
+        st.caption(f"(giver ca. +{delta_cl_maint:.1f} mg/l og +{ph_rise_from_sticks:.2f} pH-stigning)")
+
+        # Derefter placeringsteksten
+        st.caption("Tempo Sticks skal altid placeres i KLORINATOREN eller i SKIMMEREN via en Tempo Stick Dispenser - aldrig direkte i skimmeren eller poolen!")
+
+can_log = not (has_existing_stick and existing_sticks is None)
+
+if st.button(
+    "Gem måling + dosering i log",
+    type="primary",
+    use_container_width=True,
+    disabled=not can_log
+):
+    if not can_log:
+        st.error("Kan ikke gemme før antal eksisterende Tempo Sticks er valgt (1 eller 2).")
+    else:
+        now = datetime.now().strftime("%Y-%m-%d %H:%M")
+        entry = {
+            "Dato": now,
+            "Pool": selected,
+            "pH": current_ph,
+            "Klor nu": current_cl,
+            "Udlejet": leased,
+            "Eksisterende sticks": existing_sticks if has_existing_stick else 0,
+            "Nye sticks": sticks_needed if not has_existing_stick else 0,
+            "Briquetter/Daytabs": round(briqs) if delta_cl_leave >= 0.3 else 0,
+            "pH delta": round(delta_ph_eff, 2)
+        }
+
+        if selected not in logs:
+            logs[selected] = []
+        logs[selected].append(entry)
+        save_logs()
+        st.success("Logget!")
+
+# Download-knap – altid synlig når der er data
+if selected in logs and logs[selected]:
+    df = pd.DataFrame(logs[selected])
+    csv = df.to_csv(index=False, encoding="utf-8-sig").encode("utf-8-sig")
+
+    st.download_button(
+        label="Download hele loggen for denne pool som CSV (Excel)",
+        data=csv,
+        file_name=f"{selected}_pool_log_{datetime.now().strftime('%Y%m%d')}.csv",
+        mime="text/csv",
+        use_container_width=True,
+        key="download_full_log",
+        help="Gem filen på din computer – åbn i Excel eller Google Sheets"
+    )
+
+    st.subheader("Seneste målinger (vises her)")
+    st.dataframe(df.tail(10).iloc[::-1], use_container_width=True)
+
+else:
+    st.info("Ingen målinger gemt endnu for denne pool – tryk 'Gem måling + dosering i log' når du har indtastet data.")
+
+st.caption("Alle målinger gemmes automatisk lokalt i 'logs.json' i samme mappe som appen. Du kan altid downloade som CSV ovenfor.")
