@@ -36,67 +36,109 @@ def save_logs():
 st.set_page_config(page_title="Pool Dosering", layout="wide")
 
 # ────────────────────────────────────────────────
-# Forbedret farvehåndtering – høj kontrast i både light og dark mode
+# Høj kontrast og læsbarhed i både light og dark mode
 # ────────────────────────────────────────────────
 
 st.markdown("""
     <style>
-    /* Basis variabler – Streamlit opdaterer automatisk */
+    /* Basis variabler */
     :root {
         --bg-color: var(--background-color, #ffffff);
         --text-color: var(--text-color, #000000);
-        --primary: var(--primary-color, #ff4b4b);
-        --secondary-text: #333333;
+        --secondary-text: #1a1a1a;
+        --input-bg: var(--background-color, #ffffff);
+        --input-text: var(--text-color, #000000);
+        --input-border: #ccc;
         --light-bg: #f8f9fa;
         --border: #dee2e6;
     }
 
-    /* Dark mode override – sikrer høj kontrast */
-    [data-testid="stAppViewContainer"][style*="background-color: rgb(14, 17, 23)"] {
-        background-color: #0e1117 !important;
-        color: #e0e0e0 !important;
-    }
-
-    body, [data-testid="stAppViewContainer"] {
+    /* Dark mode overrides - høj kontrast */
+    [data-testid="stAppViewContainer"] {
         background-color: var(--bg-color) !important;
         color: var(--text-color) !important;
     }
 
-    /* Alert-box – god læsbarhed i begge modes */
+    /* Tving høj kontrast i dark mode */
+    [data-testid="stAppViewContainer"][style*="background-color: rgb(14, 17, 23)"] {
+        background-color: #0e1117 !important;
+        color: #f0f0f0 !important;
+    }
+
+    /* Inputfelter, selectbox, labels - altid læsbart */
+    .stTextInput > div > div > input,
+    .stNumberInput > div > div > input,
+    .stSelectbox > div > div > select,
+    .stRadio > div > label,
+    .stCheckbox > div > label {
+        color: var(--input-text) !important;
+        background-color: var(--input-bg) !important;
+        border: 1px solid var(--input-border) !important;
+    }
+
+    [data-testid="stAppViewContainer"][style*="background-color: rgb(14, 17, 23)"] .stTextInput > div > div > input,
+    [data-testid="stAppViewContainer"][style*="background-color: rgb(14, 17, 23)"] .stNumberInput > div > div > input,
+    [data-testid="stAppViewContainer"][style*="background-color: rgb(14, 17, 23)"] .stSelectbox > div > div > select,
+    [data-testid="stAppViewContainer"][style*="background-color: rgb(14, 17, 23)"] .stRadio > div > label,
+    [data-testid="stAppViewContainer"][style*="background-color: rgb(14, 17, 23)"] .stCheckbox > div > label {
+        color: #ffffff !important;
+        background-color: #1e1e1e !important;
+        border: 1px solid #555 !important;
+    }
+
+    /* Alert-box */
     .alert-box {
-        background-color: #fff8e1 !important;          /* lys gul i light */
+        background-color: #fff8e1 !important;
         border-left: 6px solid #ffb300 !important;
-        color: #5d4037 !important;                     /* mørk brun tekst */
+        color: #5d4037 !important;
         padding: 1.2rem;
         margin: 1rem 0;
         border-radius: 6px;
     }
 
-    /* Guidance – høj kontrast */
-    .guidance {
-        color: var(--text-color);
-        background-color: var(--light-bg);
-        padding: 0.8rem;
-        border-radius: 4px;
-        border: 1px solid var(--border);
-        font-size: 1.05rem;
-        margin-bottom: 1rem;
+    [data-testid="stAppViewContainer"][style*="background-color: rgb(14, 17, 23)"] .alert-box {
+        background-color: #4a3c0b !important;
+        color: #fffacd !important;
+        border-left: 6px solid #ffcc00 !important;
     }
 
-    /* Warning – høj kontrast i begge modes */
+    /* Warning */
     .warning {
-        background-color: #ffebee !important;          /* lys rød i light */
-        color: #b71c1c !important;                     /* mørk rød tekst */
+        background-color: #ffebee !important;
+        color: #b71c1c !important;
         border: 1px solid #ef9a9a !important;
         padding: 1rem;
         border-radius: 6px;
         margin: 1rem 0;
     }
 
-    /* Copyright footer – god læsbarhed */
+    [data-testid="stAppViewContainer"][style*="background-color: rgb(14, 17, 23)"] .warning {
+        background-color: #3d1f1f !important;
+        color: #ffcccc !important;
+        border: 1px solid #990000 !important;
+    }
+
+    /* Guidance */
+    .guidance {
+        color: var(--secondary-text);
+        background-color: var(--light-bg);
+        padding: 0.8rem;
+        border-radius: 4px;
+        border: 1px solid var(--border);
+        font-size: 1.05rem;
+        margin-bottom: 0.8rem;
+    }
+
+    [data-testid="stAppViewContainer"][style*="background-color: rgb(14, 17, 23)"] .guidance {
+        color: #e0e0e0 !important;
+        background-color: #1e1e1e !important;
+        border: 1px solid #444 !important;
+    }
+
+    /* Copyright */
     .copyright {
         font-size: 0.85rem;
-        color: #555 !important;                        /* mørkegrå i light */
+        color: #555 !important;
         text-align: center;
         margin-top: 2rem;
         padding: 1rem;
@@ -104,13 +146,13 @@ st.markdown("""
         background-color: #f5f5f5 !important;
     }
 
-    /* Dark mode tilpasninger til footer og copyright */
     [data-testid="stAppViewContainer"][style*="background-color: rgb(14, 17, 23)"] .copyright {
-        color: #bbbbbb !important;
+        color: #cccccc !important;
         background-color: #1a1d24 !important;
         border-top: 1px solid #444 !important;
     }
 
+    /* Knapper */
     .stButton > button {
         width: 100%;
         font-size: 1.15rem;
