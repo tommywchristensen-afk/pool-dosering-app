@@ -35,142 +35,6 @@ def save_logs():
 
 st.set_page_config(page_title="Pool Dosering", layout="wide")
 
-# ────────────────────────────────────────────────
-# Høj kontrast og læsbarhed i både light og dark mode
-# ────────────────────────────────────────────────
-
-st.markdown("""
-    <style>
-    /* Basis variabler */
-    :root {
-        --bg-color: var(--background-color, #ffffff);
-        --text-color: var(--text-color, #000000);
-        --secondary-text: #1a1a1a;
-        --input-bg: var(--background-color, #ffffff);
-        --input-text: var(--text-color, #000000);
-        --input-border: #ccc;
-        --light-bg: #f8f9fa;
-        --border: #dee2e6;
-    }
-
-    /* Dark mode overrides - høj kontrast */
-    [data-testid="stAppViewContainer"] {
-        background-color: var(--bg-color) !important;
-        color: var(--text-color) !important;
-    }
-
-    /* Tving høj kontrast i dark mode */
-    [data-testid="stAppViewContainer"][style*="background-color: rgb(14, 17, 23)"] {
-        background-color: #0e1117 !important;
-        color: #f0f0f0 !important;
-    }
-
-    /* Inputfelter, selectbox, labels - altid læsbart */
-    .stTextInput > div > div > input,
-    .stNumberInput > div > div > input,
-    .stSelectbox > div > div > select,
-    .stRadio > div > label,
-    .stCheckbox > div > label {
-        color: var(--input-text) !important;
-        background-color: var(--input-bg) !important;
-        border: 1px solid var(--input-border) !important;
-    }
-
-    [data-testid="stAppViewContainer"][style*="background-color: rgb(14, 17, 23)"] .stTextInput > div > div > input,
-    [data-testid="stAppViewContainer"][style*="background-color: rgb(14, 17, 23)"] .stNumberInput > div > div > input,
-    [data-testid="stAppViewContainer"][style*="background-color: rgb(14, 17, 23)"] .stSelectbox > div > div > select,
-    [data-testid="stAppViewContainer"][style*="background-color: rgb(14, 17, 23)"] .stRadio > div > label,
-    [data-testid="stAppViewContainer"][style*="background-color: rgb(14, 17, 23)"] .stCheckbox > div > label {
-        color: #ffffff !important;
-        background-color: #1e1e1e !important;
-        border: 1px solid #555 !important;
-    }
-
-    /* Alert-box */
-    .alert-box {
-        background-color: #fff8e1 !important;
-        border-left: 6px solid #ffb300 !important;
-        color: #5d4037 !important;
-        padding: 1.2rem;
-        margin: 1rem 0;
-        border-radius: 6px;
-    }
-
-    [data-testid="stAppViewContainer"][style*="background-color: rgb(14, 17, 23)"] .alert-box {
-        background-color: #4a3c0b !important;
-        color: #fffacd !important;
-        border-left: 6px solid #ffcc00 !important;
-    }
-
-    /* Warning */
-    .warning {
-        background-color: #ffebee !important;
-        color: #b71c1c !important;
-        border: 1px solid #ef9a9a !important;
-        padding: 1rem;
-        border-radius: 6px;
-        margin: 1rem 0;
-    }
-
-    [data-testid="stAppViewContainer"][style*="background-color: rgb(14, 17, 23)"] .warning {
-        background-color: #3d1f1f !important;
-        color: #ffcccc !important;
-        border: 1px solid #990000 !important;
-    }
-
-    /* Guidance */
-    .guidance {
-        color: var(--secondary-text);
-        background-color: var(--light-bg);
-        padding: 0.8rem;
-        border-radius: 4px;
-        border: 1px solid var(--border);
-        font-size: 1.05rem;
-        margin-bottom: 0.8rem;
-    }
-
-    [data-testid="stAppViewContainer"][style*="background-color: rgb(14, 17, 23)"] .guidance {
-        color: #e0e0e0 !important;
-        background-color: #1e1e1e !important;
-        border: 1px solid #444 !important;
-    }
-
-    /* Copyright */
-    .copyright {
-        font-size: 0.85rem;
-        color: #555 !important;
-        text-align: center;
-        margin-top: 2rem;
-        padding: 1rem;
-        border-top: 1px solid #ddd;
-        background-color: #f5f5f5 !important;
-    }
-
-    [data-testid="stAppViewContainer"][style*="background-color: rgb(14, 17, 23)"] .copyright {
-        color: #cccccc !important;
-        background-color: #1a1d24 !important;
-        border-top: 1px solid #444 !important;
-    }
-
-    /* Knapper */
-    .stButton > button {
-        width: 100%;
-        font-size: 1.15rem;
-        padding: 0.8rem;
-    }
-
-    .stButton > button:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-    }
-
-    .stDownloadButton > button {
-        font-size: 1.2rem !important;
-        padding: 1rem !important;
-    }
-    </style>
-""", unsafe_allow_html=True)
-
 st.title("Pool Dosering - HTH Briquetter & Tempo Sticks")
 
 # Pool valg / tilføj
@@ -206,14 +70,13 @@ with colB:
 
 st.markdown(
     """
-    <div class="guidance">
+    <div style="font-size: 1.05rem; color: #444; margin-bottom: 0.8rem;">
     <strong>Vigtigt om Tempo Sticks:</strong><br>
     - Vælg kun feltet hvis der er mindst 0.5 stick tilbage<br>
     - Tempo Sticks skal altid placeres i KLORINATOREN eller i SKIMMEREN via en Tempo Stick Dispenser - aldrig direkte i skimmeren eller poolen!<br>
     - Ved eksisterende sticks skal du vælge 1 eller 2
     </div>
-    """,
-    unsafe_allow_html=True
+    """
 )
 
 has_existing_stick = st.checkbox("Der ligger allerede Tempo Stick(s) i poolen (min. 0.5 stick tilbage)", value=False)
@@ -229,7 +92,7 @@ if has_existing_stick:
     if existing_sticks is None:
         st.markdown(
             """
-            <div class="warning">
+            <div style="background-color: #ffebee; color: #b71c1c; padding: 1rem; border-radius: 6px; margin: 1rem 0; border: 1px solid #ef9a9a;">
             <strong>Fejl:</strong> Du skal vælge 1 eller 2 eksisterende Tempo Sticks for at fortsætte.
             </div>
             """,
@@ -263,7 +126,7 @@ delta_ph_eff = delta_ph + ph_rise_from_sticks
 
 st.markdown(
     """
-    <div class="alert-box">
+    <div style="background-color: #fff3cd; border-left: 6px solid #ffc107; padding: 1.2rem; margin: 1rem 0; border-radius: 6px; font-size: 1.15rem; color: #664d03;">
     <strong>GØR DETTE FØRST - trin for trin</strong><br><br>
     1. Juster pH først (opløs Saniklar PH Minus i en spand med poolvand og tilsæt blandingen langsomt, gerne ud for dyserne)<br>
     2. Tilsæt HTH Briquetter/Daytabs hvis nødvendigt for at nå ~4 mg/l ved afgang fra poolhus.<br>
@@ -312,7 +175,7 @@ st.subheader("Vedligehold - Tempo Sticks (5-7 dage)")
 if has_existing_stick and existing_sticks is None:
     st.markdown(
         """
-        <div class="warning">
+        <div style="background-color: #ffebee; color: #b71c1c; padding: 1rem; border-radius: 6px; margin: 1rem 0; border: 1px solid #ef9a9a;">
         <strong>Fejl:</strong> Du skal vælge 1 eller 2 eksisterende Tempo Sticks for at fortsætte.
         </div>
         """,
@@ -388,7 +251,7 @@ st.caption("Alle målinger gemmes automatisk lokalt i 'logs.json' i samme mappe 
 # Copyright i bunden
 st.markdown(
     """
-    <div class="copyright">
+    <div style="font-size: 0.85rem; color: #555; text-align: center; margin-top: 2rem; padding: 1rem; border-top: 1px solid #ddd; background-color: #f5f5f5;">
     © 2026 Tommy Christensen, Laur Larsensgade 13, STTH, 4800 Nykøbing F.<br>
     E-mail: tommywchristensen@gmail.com<br>
     Denne applikation og dens koncept er udviklet til brug for service-teknikere ansat hos Sol og Strand.<br>
