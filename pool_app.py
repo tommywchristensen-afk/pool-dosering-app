@@ -69,7 +69,7 @@ pools, pool_info = load_pools()
 
 # Tilføj ny pool til Sheet – Adresse = Pool Navn, resten tom
 def add_pool(name, vol):
-    sheet.append_row([name, vol, name, "", "", "", ""])  # tomme felter for C, D, E, F, G osv.
+    sheet.append_row([name, vol, name, "", "", "", ""])  # Rækkefølge: Pool Navn, Volumen, Adresse, Pumpetype, Returskyl, Nøglebokskode, HE telefonnummer
 
 st.set_page_config(page_title="Pool Dosering", layout="wide")
 
