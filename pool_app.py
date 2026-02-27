@@ -16,7 +16,10 @@ SHEET_ID = "1J7hqPcK7rpRwrjaYAhKh5jDpk8tNYKhfM3_7FWCY2rA"
 WORKSHEET_NAME = "Sheet1"  # Ændr til "Ark1" hvis dit ark hedder det på dansk
 
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
+
+# Brug Streamlit Secrets (indsat i Manage app → Secrets)
+creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["gcp_service_account"], scope)
+
 client = gspread.authorize(creds)
 sheet = client.open_by_key(SHEET_ID).worksheet(WORKSHEET_NAME)
 
@@ -96,16 +99,16 @@ if not pool_list:
 # Stor header med pool-navn og volumen (kun her)
 st.header(f"{selected} - {volume:.1f} m³")
 
-# Vis ekstra info under headeren (Adresse, Nøglebokskode, HE telefonnummer, Pumpetype, Returskyl med liter/m³)
+# Vis ekstra info under headeren – med fast rækkefølge
 ordered_keys = ["Adresse", "Nøglebokskode", "HE telefonnummer", "Pumpetype", "Returskyl (5 min)"]
 info_lines = []
 
-# Tilføj de prioriterede kolonner først (tving rækkefølgen)
+# Tilføj de prioriterede kolonner først (tvunget rækkefølge)
 for key in ordered_keys:
     if key in info:
         info_lines.append(f"{key}: {info[key]}")
 
-# Tilføj alle øvrige kolonner bagefter
+# Tilføj alle øvrige kolonner bagefter (hvis der er flere)
 for key in info:
     if key not in ordered_keys:
         info_lines.append(f"{key}: {info[key]}")
