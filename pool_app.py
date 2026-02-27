@@ -67,9 +67,9 @@ def load_pools():
 
 pools, pool_info = load_pools()
 
-# Tilføj ny pool til Sheet – rettet rækkefølge for at matche dit sheet
+# Tilføj ny pool til Sheet – rettet rækkefølge for at matche typisk layout
 def add_pool(name, vol):
-    # Rækkefølge: Pool Navn, Volumen, Pumpetype, Adresse, Returskyl (5 min), Nøglebokskode, HE telefonnummer
+    # Rækkefølge: Pool Navn, Volumen, Pumpetype (tom), Adresse (name), Returskyl (tom), Nøglebokskode (tom), HE telefonnummer (tom)
     sheet.append_row([name, vol, "", name, "", "", ""])
 
 st.set_page_config(page_title="Pool Dosering", layout="wide")
