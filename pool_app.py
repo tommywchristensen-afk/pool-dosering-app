@@ -7,6 +7,17 @@
 import streamlit as st
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
+import os
+from datetime import datetime
+
+# Automatisk versionsnummer: vÅÅÅÅMMDD (sidste ændring af pool_app.py)
+def get_auto_version():
+    file_path = __file__  # Denne fil selv
+    timestamp = os.path.getmtime(file_path)
+    dt = datetime.fromtimestamp(timestamp)
+    return f"v{dt.strftime('%Y%m%d')}"
+
+VERSION = get_auto_version()
 
 # ────────────────────────────────────────────────
 # Google Sheets opsætning – DIT SHEET-ID
@@ -17,7 +28,7 @@ WORKSHEET_NAME = "Sheet1"  # Ændr til "Ark1" hvis dit ark hedder det på dansk
 
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 
-# Brug Streamlit Secrets (indsat i Manage app → Secrets)
+# Brug Streamlit Secrets til credentials (på cloud)
 creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["gcp_service_account"], scope)
 
 client = gspread.authorize(creds)
@@ -103,12 +114,10 @@ st.header(f"{selected} - {volume:.1f} m³")
 ordered_keys = ["Adresse", "Nøglebokskode", "HE telefonnummer", "Pumpetype", "Returskyl (5 min)"]
 info_lines = []
 
-# Tilføj de prioriterede kolonner først (tvunget rækkefølge)
 for key in ordered_keys:
     if key in info:
         info_lines.append(f"{key}: {info[key]}")
 
-# Tilføj alle øvrige kolonner bagefter (hvis der er flere)
 for key in info:
     if key not in ordered_keys:
         info_lines.append(f"{key}: {info[key]}")
@@ -122,9 +131,32 @@ leased = st.radio("Husets status", ["Ikke udlejet", "Udlejet"], horizontal=True)
 # Målinger
 colA, colB = st.columns(2)
 with colA:
-    current_ph = st.number_input("Nuværende pH", min_value=0.0, value=0.0, step=0.1)
+    current_ph = st.number_input("Nuværende pH", min_value=0.0, value=7.0, step=0.1)
 with colB:
     current_cl = st.number_input("Nuværende frit klor (mg/l)", min_value=0.0, value=0.0, step=0.1)
+
+# Advarsel om klorgas – kun ved pH 4.0–6.9 + opkloring (gul), under 4.0 (rød/alvorlig)
+delta_cl_leave = max(0, 4.0 - current_cl)  # Mål 4.0 mg/l
+
+if delta_cl_leave > 0:
+    if current_ph < 4.0:
+        st.error(
+            "**ALVORLIG ADVARSEL: EKSTREMT LAV pH + KLOR-TILSÆTNING!**\n\n"
+            "Risiko for frigivelse af **farlig klorgas** er meget høj!\n\n"
+            "- STOP! Mål pH igen og hæv den til mindst 7.0 FØR du tilsætter klor.\n"
+            "- Brug aldrig klor og pH-minus samtidig.\n"
+            "- Opløs klor i spand vand, tilsæt langsomt, sørg for god cirkulation og frisk luft.\n"
+            "- Forlad området hvis du mærker lugt af klor eller åndedrætsbesvær.\n"
+            "- Kontakt giftlinjen ved symptomer!"
+        )
+    elif 4.0 <= current_ph <= 6.9:
+        st.warning(
+            "**Advarsel: Lav pH + klor-tilsætning kan frigive klorgas!**\n\n"
+            "- Sørg for pH er mindst 7.0 før du tilsætter klor.\n"
+            "- Opløs klor i spand vand først, tilsæt langsomt ud for dyserne.\n"
+            "- Sørg for god cirkulation og frisk luft i poolhuset.\n"
+            "- Mål igen efter 30–60 minutter."
+        )
 
 # Checkbox og selectbox
 has_existing_stick = st.checkbox("**Der ligger allerede en Tempo Stick i skimmer/klorinator**", value=False)
@@ -260,12 +292,13 @@ elif new_cl_after_leave <= 4.0:
 else:
     st.info("Klor efter opkloring er over 4.0 mg/l – ingen nye Tempo Sticks nødvendige til vedligehold.")
 
-# Copyright i bunden
+# Copyright + automatisk versionsnummer i bunden
 st.markdown(
-    """
+    f"""
     <div style="font-size: 0.85rem; color: #555; text-align: center; margin-top: 2rem; padding: 1rem; border-top: 1px solid #ddd; background-color: #f5f5f5;">
     © 2026 Tommy Christensen, Laur Larsensgade 13, STTH, 4800 Nykøbing F.<br>
     E-mail: tommywchristensen@gmail.com<br>
+    Version: {VERSION}<br>
     Denne applikation og dens koncept er udviklet til brug for service-teknikere ansat hos Sol og Strand.<br>
     Alle rettigheder forbeholdes. Må ikke kopieres, distribueres, modificeres, sælges eller på anden måde anvendes<br>
     kommercielt eller deles offentligt uden skriftlig tilladelse fra ophavsmanden.
