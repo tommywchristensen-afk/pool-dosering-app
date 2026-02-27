@@ -16,10 +16,7 @@ SHEET_ID = "1J7hqPcK7rpRwrjaYAhKh5jDpk8tNYKhfM3_7FWCY2rA"
 WORKSHEET_NAME = "Sheet1"  # Ændr til "Ark1" hvis dit ark hedder det på dansk
 
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-
-# Brug Streamlit Secrets til credentials (indsat i Manage app → Secrets)
-creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["gcp_service_account"], scope)
-
+creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
 client = gspread.authorize(creds)
 sheet = client.open_by_key(SHEET_ID).worksheet(WORKSHEET_NAME)
 
@@ -37,68 +34,107 @@ def load_pools():
             except (ValueError, TypeError):
                 vol = 0.0
             pools[name] = vol
-            pool_info[name] = {
-                "Adresse": row.get("Adresse", "Ukendt"),
-                "Pumpetype": row.get("Pumpetype", "Ukendt")
-            }
+            
+            # Hent ALLE kolonner som ekstra info
+            extra = {}
+            for key, value in row.items():
+                if key not in ["Pool Navn", "Volumen (m3)"]:
+                    if key == "Returskyl (5 min)" and value:
+                        try:
+                            liter = float(value)
+                            kubik = liter / 1000
+                            extra[key] = f"{int(liter)} liter / {kubik:.1f} m³"
+                        except (ValueError, TypeError):
+                            extra[key] = value
+                    else:
+                        extra[key] = value if value else "Ikke angivet"
+            pool_info[name] = extra
     return pools, pool_info
 
 pools, pool_info = load_pools()
 
-# Tilføj ny pool til Sheet
+# Tilføj ny pool til Sheet – Adresse = Pool Navn, resten tom
 def add_pool(name, vol):
-    sheet.append_row([name, vol, name, ""])  # Adresse = Pool Navn, Pumpetype tom
+    sheet.append_row([name, vol, name, "", "", "", ""])  # tomme felter for C, D, E, F, G osv.
 
 st.set_page_config(page_title="Pool Dosering", layout="wide")
 
 st.title("Pool Dosering - HTH Briquetter & Tempo Sticks")
 
-# Pool valg / tilføj ny pool
+# Pool valg – øverst
 st.header("Pool")
-col1, col2 = st.columns([3, 2])
-with col1:
-    new_name = st.text_input("Her har du mulighed for at tilføje en ny pool")
-with col2:
-    new_vol = st.number_input("Volumen (m³)", min_value=0.0, value=0.0, step=1.0)
-
-if st.button("Tilføj ny pool til listen"):
-    if new_name.strip():
-        add_pool(new_name.strip(), new_vol)
-        st.success(f"{new_name.strip()} tilføjet til Google Sheet (Adresse sat til samme som navn)")
-        st.rerun()  # Opdater listen fra Sheet
-
 pool_list = list(pools.keys())
 if pool_list:
     selected = st.selectbox("Vælg pool fra listen", pool_list)
     volume = pools[selected]
     info = pool_info.get(selected, {})
-    st.caption(f"**{selected} – {volume:.1f} m³**")
-    st.caption(f"Adresse: {info.get('Adresse', 'Ikke angivet')} | Pumpetype: {info.get('Pumpetype', 'Ikke angivet')}")
 else:
     st.info("Ingen pools fundet i Google Sheet – tilføj nogle i Sheetet først")
+    selected = None
+    volume = 0.0
+    info = {}
+
+# Foldbar tilføjelse af ny pool – under vælgeren
+with st.expander("Tilføj ny pool", expanded=False):
+    col1, col2 = st.columns([3, 2])
+    with col1:
+        new_name = st.text_input("Nyt pool-navn")
+    with col2:
+        new_vol = st.number_input("Volumen (m³)", min_value=0.0, value=0.0, step=1.0)
+    
+    if st.button("Gem ny pool"):
+        if new_name.strip():
+            add_pool(new_name.strip(), new_vol)
+            st.success(f"{new_name.strip()} tilføjet til Google Sheet (Adresse sat til samme som navn)")
+            st.rerun()
+        else:
+            st.error("Du skal indtaste et pool-navn")
+
+if not pool_list:
     st.stop()
 
+# Stor header med pool-navn og volumen (kun her)
 st.header(f"{selected} - {volume:.1f} m³")
 
+# Vis ekstra info under headeren (Adresse, Nøglebokskode, HE telefonnummer, Pumpetype, Returskyl med liter/m³)
+ordered_keys = ["Adresse", "Nøglebokskode", "HE telefonnummer", "Pumpetype", "Returskyl (5 min)"]
+info_lines = []
+
+# Tilføj de prioriterede kolonner først (tving rækkefølgen)
+for key in ordered_keys:
+    if key in info:
+        info_lines.append(f"{key}: {info[key]}")
+
+# Tilføj alle øvrige kolonner bagefter
+for key in info:
+    if key not in ordered_keys:
+        info_lines.append(f"{key}: {info[key]}")
+
+if info_lines:
+    st.caption(" | ".join(info_lines))
+
+# Husets status – før målinger
+leased = st.radio("Husets status", ["Ikke udlejet", "Udlejet"], horizontal=True)
+
+# Målinger
 colA, colB = st.columns(2)
 with colA:
     current_ph = st.number_input("Nuværende pH", min_value=0.0, value=0.0, step=0.1)
 with colB:
     current_cl = st.number_input("Nuværende frit klor (mg/l)", min_value=0.0, value=0.0, step=0.1)
 
+# Checkbox og selectbox
+has_existing_stick = st.checkbox("**Der ligger allerede en Tempo Stick i skimmer/klorinator**", value=False)
+
+# Vejledning lige efter checkbox
 st.markdown(
     """
-    <div style="font-size: 1.05rem; color: #444; margin-bottom: 0.8rem;">
-    <strong>Vigtigt om Tempo Sticks:</strong><br>
-    - Afkryds kun feltet hvis der er mindst 0.5 stick tilbage<br>
-    - Tempo Sticks skal altid placeres i KLORINATOREN eller i SKIMMEREN via en Tempo Stick Dispenser - aldrig direkte i skimmeren eller poolen!<br>
-    - Ved eksisterende sticks skal du vælge 1 eller 2
+    <div style="font-size: 0.9rem; color: #666; margin-top: -8px; margin-bottom: 0.5rem;">
+    - Afkryds kun feltet hvis der er mindst 0.5 stick tilbage
     </div>
     """,
     unsafe_allow_html=True
 )
-
-has_existing_stick = st.checkbox("Der ligger allerede Tempo Stick(s) i poolen (min. 0.5 stick tilbage)", value=False)
 
 existing_sticks = None
 if has_existing_stick:
@@ -118,28 +154,46 @@ if has_existing_stick:
             unsafe_allow_html=True
         )
 
-leased = st.radio("Husets status", ["Ikke udlejet", "Udlejet"], horizontal=True)
+# Vejledningstekst under checkbox/selectbox
+st.markdown(
+    """
+    <div style="font-size: 1.05rem; color: #444; margin-bottom: 0.8rem;">
+    <strong>Vigtigt om Tempo Sticks:</strong><br>
+    - Tempo Sticks skal altid placeres i KLORINATOREN eller i SKIMMEREN via en Tempo Stick Dispenser - aldrig direkte i skimmeren eller poolen!
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
 target_ph = 7.0
 target_cl_leave = 4.0
-target_cl_maintenance = 5.5 if leased == "Udlejet" else 3.8
+target_cl_maintenance = 4.0  # Mål ved vedligehold (udlejet hus)
 
 delta_ph = current_ph - target_ph
 delta_cl_leave = max(0, target_cl_leave - current_cl)
 
+# Beregn nyt klor-niveau EFTER opkloring med Briquetter
+new_cl_after_leave = current_cl + delta_cl_leave
+
 delta_cl_maint = 0.0
-if not has_existing_stick and leased == "Udlejet":
-    delta_cl_maint = max(0, target_cl_maintenance - current_cl)
-
-ph_rise_from_sticks = 0.0
 sticks_needed = 0.0
+ph_rise_from_sticks = 0.0
 
-if delta_cl_maint > 0:
-    klor_per_stick_25m3 = 8.0
-    raise_here = klor_per_stick_25m3 * (25.0 / volume)
-    sticks_needed = delta_cl_maint / raise_here
-    sticks_needed = round(sticks_needed)
-    ph_rise_from_sticks = 0.4 * sticks_needed * (25.0 / volume)
+# Tempo Sticks foreslås hvis udlejet OG klor EFTER opkloring <= 4.0 mg/l
+if not has_existing_stick and leased == "Udlejet":
+    if new_cl_after_leave <= 4.0:
+        delta_cl_maint = max(0, target_cl_maintenance - new_cl_after_leave)
+        if delta_cl_maint > 0:
+            klor_per_stick_25m3 = 8.0
+            raise_here = klor_per_stick_25m3 * (25.0 / volume)
+            sticks_needed = delta_cl_maint / raise_here
+            sticks_needed = max(1, round(sticks_needed))  # Mindst 1 stick
+            ph_rise_from_sticks = 0.4 * sticks_needed * (25.0 / volume)
+        else:
+            sticks_needed = 1  # Mindst 1 stick selv hvis delta er 0
+            ph_rise_from_sticks = 0.4 * sticks_needed * (25.0 / volume)
+    else:
+        sticks_needed = 0
 
 delta_ph_eff = delta_ph + ph_rise_from_sticks
 
@@ -149,7 +203,7 @@ st.markdown(
     <strong>GØR DETTE FØRST - trin for trin</strong><br><br>
     1. Juster pH først (opløs Saniklar PH Minus i en spand med poolvand og tilsæt blandingen langsomt, gerne ud for dyserne)<br>
     2. Tilsæt HTH Briquetter/Daytabs hvis nødvendigt for at nå ~4 mg/l ved afgang fra poolhus.<br>
-    3. Tilsæt Tempo Sticks i KLORINATOREN eller SKIMMERKURVEN via en Tempo Stick Dispenser (kun hvis der ingen Tempo Sticks er i forvejen og huset er udlejet)
+    3. Tilsæt Tempo Sticks i KLORINATOREN eller i SKIMMERKURVEN via en Tempo Stick Dispenser (kun hvis der ingen Tempo Sticks er i forvejen og huset er udlejet)
     </div>
     """,
     unsafe_allow_html=True
@@ -191,28 +245,17 @@ else:
 
 st.subheader("Vedligehold - Tempo Sticks (5-7 dage)")
 
-if has_existing_stick and existing_sticks is None:
-    st.markdown(
-        """
-        <div style="background-color: #ffebee; color: #b71c1c; padding: 1rem; border-radius: 6px; margin: 1rem 0; border: 1px solid #ef9a9a;">
-        <strong>Fejl:</strong> Du skal vælge 1 eller 2 eksisterende Tempo Sticks for at fortsætte.
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-    st.info("Vedligeholdelsesforslag vises først når antal eksisterende sticks er valgt.")
+if has_existing_stick:
+    st.info(f"Der ligger allerede {existing_sticks} stk → ingen nye sticks foreslået")
+elif leased == "Ikke udlejet":
+    st.info("Huset er ikke udlejet → ingen Tempo Sticks nødvendige")
+elif new_cl_after_leave <= 4.0:
+    added_cl = sticks_needed * 8.0 * (25.0 / volume)
+    st.markdown(f"**HTH Tempo Sticks: {sticks_needed} stk**")
+    st.caption(f"→ giver ca. +{added_cl:.1f} mg/l klor og +{ph_rise_from_sticks:.2f} pH-stigning")
+    st.caption("Tempo Sticks skal altid placeres i KLORINATOREN eller i SKIMMEREN via en Tempo Stick Dispenser - aldrig direkte i skimmeren eller poolen!")
 else:
-    if has_existing_stick:
-        st.info(f"Der ligger allerede {existing_sticks} stk → ingen nye sticks foreslået")
-    elif leased == "Ikke udlejet":
-        st.info("Huset er ikke udlejet → ingen Tempo Sticks - kun Briquetter/Daytabs til 3-4 mg/l")
-    elif sticks_needed == 0:
-        st.info("Ingen nye Tempo Sticks nødvendige")
-    else:
-        added_cl = sticks_needed * 8.0 * (25.0 / volume)
-        st.markdown(f"**HTH Tempo Sticks: {sticks_needed:.0f} stk**")
-        st.caption(f"→ giver ca. +{added_cl:.1f} mg/l klor og +{ph_rise_from_sticks:.2f} pH-stigning")
-        st.caption("Tempo Sticks skal altid placeres i KLORINATOREN eller i SKIMMEREN via en Tempo Stick Dispenser - aldrig direkte i skimmeren eller poolen!")
+    st.info("Klor efter opkloring er over 4.0 mg/l – ingen nye Tempo Sticks nødvendige til vedligehold.")
 
 # Copyright i bunden
 st.markdown(
