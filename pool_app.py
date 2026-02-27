@@ -1,6 +1,6 @@
 # Copyright © 2026 Tommy Christensen, Laur Larsensgade 13, STTH, 4800 Nykøbing F.
 # E-mail: tommywchristensen@gmail.com
-# Denne kode og det tilhørende koncept er udviklet til brug for service-teknikere ansat hos Sol og Strand.
+# Denne kode og det tilhørende koncept er udviklet til brug for service teknikere ansat hos Sol og Strand.
 # Alle rettigheder forbeholdes. Må ikke kopieres, distribueres, modificeres, sælges eller på anden måde anvendes
 # kommercielt eller deles offentligt uden skriftlig tilladelse fra ophavsmanden.
 
@@ -299,7 +299,7 @@ st.markdown(
     © 2026 Tommy Christensen, Laur Larsensgade 13, STTH, 4800 Nykøbing F.<br>
     E-mail: tommywchristensen@gmail.com<br>
     Version: {VERSION}<br>
-    Denne applikation og dens koncept er udviklet til brug for service-teknikere ansat hos Sol og Strand.<br>
+    Denne applikation og dens koncept er udviklet til brug for service teknikere ansat hos Sol og Strand.<br>
     Alle rettigheder forbeholdes. Må ikke kopieres, distribueres, modificeres, sælges eller på anden måde anvendes<br>
     kommercielt eller deles offentligt uden skriftlig tilladelse fra ophavsmanden.
     </div>
