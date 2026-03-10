@@ -7,24 +7,13 @@
 import streamlit as st
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-import os
-from datetime import datetime
-
-# Automatisk versionsnummer: vÅÅÅÅMMDD (sidste ændring af pool_app.py)
-def get_auto_version():
-    file_path = __file__ # Denne fil selv
-    timestamp = os.path.getmtime(file_path)
-    dt = datetime.fromtimestamp(timestamp)
-    return f"v{dt.strftime('%Y%m%d')}"
-
-VERSION = get_auto_version()
 
 # ────────────────────────────────────────────────
 # Google Sheets opsætning – DIT SHEET-ID
 # ────────────────────────────────────────────────
 
 SHEET_ID = "1J7hqPcK7rpRwrjaYAhKh5jDpk8tNYKhfM3_7FWCY2rA"
-WORKSHEET_NAME = "Sheet1" # Ændr til "Ark1" hvis dit ark hedder det på dansk
+WORKSHEET_NAME = "Sheet1"  # Ændr til "Ark1" hvis dit ark hedder det på dansk
 
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 
@@ -48,7 +37,7 @@ def load_pools():
             except (ValueError, TypeError):
                 vol = 0.0
             pools[name] = vol
-          
+            
             # Hent ALLE kolonner som ekstra info
             extra = {}
             for key, value in row.items():
@@ -95,6 +84,27 @@ if pool_list:
         st.caption(" | ".join(info_lines))
 else:
     st.info("Ingen pools fundet i Google Sheet – tilføj nogle i Sheetet først")
+    selected = None
+    volume = 0.0
+    info = {}
+
+# Foldbar tilføjelse af ny pool – under vælgeren
+with st.expander("Tilføj ny pool", expanded=False):
+    col1, col2 = st.columns([3, 2])
+    with col1:
+        new_name = st.text_input("Nyt pool-navn")
+    with col2:
+        new_vol = st.number_input("Volumen (m³)", min_value=0.0, value=0.0, step=1.0)
+    
+    if st.button("Gem ny pool"):
+        if new_name.strip():
+            add_pool(new_name.strip(), new_vol)
+            st.success(f"{new_name.strip()} tilføjet til Google Sheet (Adresse sat til samme som navn)")
+            st.rerun()
+        else:
+            st.error("Du skal indtaste et pool-navn")
+
+if not pool_list:
     st.stop()
 
 st.header(f"{selected} - {volume:.1f} m³")
@@ -181,16 +191,7 @@ if not has_existing_stick and leased == "Udlejet":
     else:
         sticks_needed = 0
 
-# Forventet pH-stigning fra Briquetter/Daytabs – fra dit Excel-ark: 0.05 per 1 mg/l klor-stigning
-ph_rise_from_briqs = delta_cl_leave * 0.05
-
-# Samlet forventet pH-stigning fra klor-tilsætning
-total_ph_rise_from_klor = ph_rise_from_briqs + ph_rise_from_sticks
-
-# Forventet PH efter klor-tilsætning
-expected_ph_after_klor = current_ph + total_ph_rise_from_klor
-
-delta_ph_eff = expected_ph_after_klor - target_ph
+delta_ph_eff = delta_ph + ph_rise_from_sticks
 
 st.markdown(
     """
@@ -206,25 +207,22 @@ st.markdown(
 
 st.header("Anbefalet dosering")
 
-# PH-justering – reguler til 7.0 hvis PH før eller efter klor er over/under 7.0
-if current_ph > 7.0 or expected_ph_after_klor > 7.0:
-    delta_to_reduce = max(current_ph - target_ph, expected_ph_after_klor - target_ph)
-    ml_minus = 35 * delta_to_reduce * volume
-    st.subheader(f"Sænk pH med {delta_to_reduce:.2f} (efter klor)")
+if abs(delta_ph_eff) < 0.05:
+    st.success("pH ser fin ud - ingen justering nødvendig")
+elif delta_ph_eff > 0:
+    ml_minus = 35 * delta_ph_eff * volume
+    st.subheader(f"Sænk pH med {delta_ph_eff:.2f}")
     st.markdown(f"**pH-minus → {ml_minus:.0f} ml**")
-elif current_ph < 7.0 and expected_ph_after_klor < 7.0:
-    delta_to_raise = target_ph - expected_ph_after_klor
-    ml_plus = 49 * delta_to_raise * volume
-    st.subheader(f"Hæv pH med {delta_to_raise:.2f} (efter klor)")
-    st.markdown(f"**pH-plus → {ml_plus:.0f} ml**")
 else:
-    st.success("pH er på eller tæt på målet efter klor – ingen PH-justering nødvendig")
+    ml_plus = 49 * (-delta_ph_eff) * volume
+    st.subheader(f"Hæv pH med {-delta_ph_eff:.2f}")
+    st.markdown(f"**pH-plus → {ml_plus:.0f} ml**")
 
 if current_cl > 6.0:
     mg_to_lower = current_cl - target_cl_leave
     antiklor_per_m3_per_mg = 0.83
     antiklor_total = antiklor_per_m3_per_mg * mg_to_lower * volume
-   
+    
     st.subheader(f"Sænkning af klor (for højt: {current_cl:.1f} mg/l)")
     st.markdown(f"**Anti-klor: {antiklor_total:.0f} gram/ml**")
     st.caption(f"→ sænker klor fra {current_cl:.1f} mg/l til {target_cl_leave} mg/l")
@@ -236,7 +234,7 @@ else:
         briqs = 0.21 * delta_cl_leave * volume
         briqs_round = round(briqs)
         new_cl = current_cl + delta_cl_leave
-       
+        
         st.subheader(f"Opkloring til {target_klor_op} mg/l ved afgang")
         st.markdown(f"**HTH Briquetter/Daytabs: {briqs:.1f} stk → afrund til {briqs_round} stk**")
         st.caption(f"→ doserer klor fra {current_cl:.1f} mg/l til {new_cl:.1f} mg/l")
