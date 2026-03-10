@@ -7,17 +7,6 @@
 import streamlit as st
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-import os
-from datetime import datetime
-
-# Automatisk versionsnummer: vÅÅÅÅMMDD (sidste ændring af pool_app.py)
-def get_auto_version():
-    file_path = __file__  # Denne fil selv
-    timestamp = os.path.getmtime(file_path)
-    dt = datetime.fromtimestamp(timestamp)
-    return f"v{dt.strftime('%Y%m%d')}"
-
-VERSION = get_auto_version()
 
 # ────────────────────────────────────────────────
 # Google Sheets opsætning – DIT SHEET-ID
@@ -28,7 +17,6 @@ WORKSHEET_NAME = "Sheet1"  # Ændr til "Ark1" hvis dit ark hedder det på dansk
 
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 
-# Brug Streamlit Secrets til credentials (på cloud)
 creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["gcp_service_account"], scope)
 
 client = gspread.authorize(creds)
@@ -49,7 +37,6 @@ def load_pools():
                 vol = 0.0
             pools[name] = vol
            
-            # Hent ALLE kolonner som ekstra info
             extra = {}
             for key, value in row.items():
                 if key not in ["Pool Navn", "Volumen (m3)"]:
@@ -67,16 +54,13 @@ def load_pools():
 
 pools, pool_info = load_pools()
 
-# Tilføj ny pool til Sheet – rettet rækkefølge for at matche typisk layout
 def add_pool(name, vol):
-    # Rækkefølge: Pool Navn, Volumen, Pumpetype (tom), Adresse (name), Returskyl (tom), Nøglebokskode (tom), HE telefonnummer (tom)
     sheet.append_row([name, vol, "", name, "", "", ""])
 
 st.set_page_config(page_title="Pool Dosering", layout="wide")
 
 st.title("Pool Dosering - HTH Briquetter & Tempo Sticks")
 
-# Pool valg – øverst
 st.header("Pool")
 pool_list = list(pools.keys())
 if pool_list:
@@ -146,11 +130,9 @@ target_cl_maintenance = 5.5 if leased == "Udlejet" else 3.8
 
 delta_ph = current_ph - target_ph
 
-# Rettet opkloringslogik: Hvis klor <= 0.3 → op til 6.0 mg/l, ellers op til 4.0 mg/l
 target_klor_op = 6.0 if current_cl <= 0.3 else 4.0
 delta_cl_leave = max(0, target_klor_op - current_cl)
 
-# Beregn nyt klor-niveau EFTER opkloring
 new_cl_after_leave = current_cl + delta_cl_leave
 
 delta_cl_maint = 0.0
@@ -167,41 +149,21 @@ if not has_existing_stick and leased == "Udlejet":
             sticks_needed = round(sticks_needed)
             ph_rise_from_sticks = 0.4 * sticks_needed * (25.0 / volume)
         else:
-            sticks_needed = 1  # Mindst 1 stick selv hvis delta er 0
+            sticks_needed = 1
             ph_rise_from_sticks = 0.4 * sticks_needed * (25.0 / volume)
     else:
         sticks_needed = 0
 
-# Forventet pH-stigning fra Briquetter/Daytabs (ca. 0.25 per stk ved lav startklor og høj dosis)
 ph_rise_from_briqs = 0.0
 if delta_cl_leave > 0:
     briqs = 0.21 * delta_cl_leave * volume
-    ph_rise_from_briqs = 0.25 * briqs * (25.0 / volume)  # højere tilnærmelse ved start fra 0 klor
+    ph_rise_from_briqs = 0.2 * briqs * (25.0 / volume)  # lavere faktor ved høj dosis
 
-# Samlet forventet pH-stigning fra klor-tilsætning
 total_ph_rise_from_klor = ph_rise_from_briqs + ph_rise_from_sticks
 
-# Forventet PH efter klor-tilsætning
 expected_ph_after_klor = current_ph + total_ph_rise_from_klor
 
-# PH-justering – reguler ALTID til 7.0 hvis PH før eller efter klor er over 7.0
-if current_ph > 7.0 or expected_ph_after_klor > 7.0:
-    # PH er over eller bliver over 7.0 – sænk med pH-minus (mere hvis klor hæver yderligere)
-    delta_to_correct = max(current_ph - target_ph, expected_ph_after_klor - target_ph)
-    ml_minus = 35 * delta_to_correct * volume
-    st.subheader(f"Sænk pH med {delta_to_correct:.2f} (efter klor)")
-    st.markdown(f"**pH-minus → {ml_minus:.0f} ml**")
-elif current_ph < 7.0 and expected_ph_after_klor < 7.0:
-    # PH er under 7.0 og klor hæver ikke nok til at komme over – hæv med pH-plus
-    delta_to_correct = target_ph - min(current_ph, expected_ph_after_klor)
-    ml_plus = 49 * delta_to_correct * volume
-    st.subheader(f"Hæv pH med {delta_to_correct:.2f} (efter klor)")
-    st.markdown(f"**pH-plus → {ml_plus:.0f} ml**")
-else:
-    # PH er på eller tæt på 7.0 – ingen justering
-    st.success("pH er på eller tæt på målet efter klor – ingen PH-justering nødvendig")
-
-delta_ph_eff = expected_ph_after_klor - target_ph  # Bruges kun til intern beregning hvis nødvendigt
+delta_ph_eff = expected_ph_after_klor - target_ph
 
 st.markdown(
     """
@@ -216,6 +178,20 @@ st.markdown(
 )
 
 st.header("Anbefalet dosering")
+
+# PH-justering – kun hvis PH før eller efter klor ville være over 7.0
+if expected_ph_after_klor > 7.0:
+    delta_to_reduce = expected_ph_after_klor - target_ph
+    ml_minus = 35 * delta_to_reduce * volume
+    st.subheader(f"Sænk pH med {delta_to_reduce:.2f} (efter klor)")
+    st.markdown(f"**pH-minus → {ml_minus:.0f} ml**")
+elif current_ph < 7.0 and expected_ph_after_klor < 7.0:
+    delta_to_raise = target_ph - expected_ph_after_klor
+    ml_plus = 49 * delta_to_raise * volume
+    st.subheader(f"Hæv pH med {delta_to_raise:.2f} (efter klor)")
+    st.markdown(f"**pH-plus → {ml_plus:.0f} ml**")
+else:
+    st.success("pH er på eller tæt på målet efter klor – ingen PH-justering nødvendig")
 
 if current_cl > 6.0:
     mg_to_lower = current_cl - target_cl_leave
@@ -252,7 +228,7 @@ elif new_cl_after_leave <= 4.0:
 else:
     st.info("Klor efter opkloring er over 4.0 mg/l – ingen nye Tempo Sticks nødvendige til vedligehold.")
 
-# Ingen synlig copyright i bunden – kun versionsnummer
+# Versionsnummer i bunden (minimalt)
 st.markdown(
     f"""
     <div style="font-size: 0.85rem; color: #555; text-align: center; margin-top: 2rem; padding: 1rem;">
