@@ -7,6 +7,17 @@
 import streamlit as st
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
+import os
+from datetime import datetime
+
+# Automatisk versionsnummer: vÅÅÅÅMMDD (sidste ændring af pool_app.py)
+def get_auto_version():
+    file_path = __file__  # Denne fil selv
+    timestamp = os.path.getmtime(file_path)
+    dt = datetime.fromtimestamp(timestamp)
+    return f"v{dt.strftime('%Y%m%d')}"
+
+VERSION = get_auto_version()
 
 # ────────────────────────────────────────────────
 # Google Sheets opsætning – DIT SHEET-ID
@@ -23,7 +34,7 @@ creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["gcp_service
 client = gspread.authorize(creds)
 sheet = client.open_by_key(SHEET_ID).worksheet(WORKSHEET_NAME)
 
-# Hent pools fra Sheet – med get_all_values() for at bevare ledende nuller
+# Hent pools fra Sheet – med get_all_values() for at bevare ledende nuller i nøglebokskoder
 def load_pools():
     values = sheet.get_all_values()
     if not values:
