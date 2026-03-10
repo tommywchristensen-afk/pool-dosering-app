@@ -17,6 +17,7 @@ WORKSHEET_NAME = "Sheet1"  # Ændr til "Ark1" hvis dit ark hedder det på dansk
 
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 
+# Brug Streamlit Secrets til credentials (på cloud)
 creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["gcp_service_account"], scope)
 
 client = gspread.authorize(creds)
@@ -54,6 +55,7 @@ def load_pools():
 
 pools, pool_info = load_pools()
 
+# Tilføj ny pool til Sheet – rettet rækkefølge
 def add_pool(name, vol):
     sheet.append_row([name, vol, "", name, "", "", ""])
 
@@ -61,6 +63,7 @@ st.set_page_config(page_title="Pool Dosering", layout="wide")
 
 st.title("Pool Dosering - HTH Briquetter & Tempo Sticks")
 
+# Pool valg – øverst
 st.header("Pool")
 pool_list = list(pools.keys())
 if pool_list:
@@ -154,16 +157,28 @@ if not has_existing_stick and leased == "Udlejet":
     else:
         sticks_needed = 0
 
-ph_rise_from_briqs = 0.0
-if delta_cl_leave > 0:
-    briqs = 0.21 * delta_cl_leave * volume
-    ph_rise_from_briqs = 0.2 * briqs * (25.0 / volume)  # lavere faktor ved høj dosis
+# Forventet pH-stigning fra Briquetter/Daytabs – fra dit ark: 0.05 per 1 mg/l klor-stigning
+ph_rise_from_briqs = delta_cl_leave * 0.05  # direkte fra din note i Excel
 
+# Samlet forventet pH-stigning fra klor-tilsætning (Briquetter + Tempo Sticks)
 total_ph_rise_from_klor = ph_rise_from_briqs + ph_rise_from_sticks
 
+# Forventet PH efter klor-tilsætning
 expected_ph_after_klor = current_ph + total_ph_rise_from_klor
 
-delta_ph_eff = expected_ph_after_klor - target_ph
+# PH-justering – kun hvis PH før eller efter klor ville være over/under 7.0
+if expected_ph_after_klor > 7.0:
+    delta_to_reduce = expected_ph_after_klor - target_ph
+    ml_minus = 35 * delta_to_reduce * volume  # 35 ml per 0.1 per m³ fra dit ark
+    st.subheader(f"Sænk pH med {delta_to_reduce:.2f} (efter klor)")
+    st.markdown(f"**pH-minus → {ml_minus:.0f} ml**")
+elif expected_ph_after_klor < 7.0:
+    delta_to_raise = target_ph - expected_ph_after_klor
+    ml_plus = 49 * delta_to_raise * volume
+    st.subheader(f"Hæv pH med {delta_to_raise:.2f} (efter klor)")
+    st.markdown(f"**pH-plus → {ml_plus:.0f} ml**")
+else:
+    st.success("pH er på eller tæt på målet efter klor – ingen PH-justering nødvendig")
 
 st.markdown(
     """
@@ -178,20 +193,6 @@ st.markdown(
 )
 
 st.header("Anbefalet dosering")
-
-# PH-justering – kun hvis PH før eller efter klor ville være over 7.0
-if expected_ph_after_klor > 7.0:
-    delta_to_reduce = expected_ph_after_klor - target_ph
-    ml_minus = 35 * delta_to_reduce * volume
-    st.subheader(f"Sænk pH med {delta_to_reduce:.2f} (efter klor)")
-    st.markdown(f"**pH-minus → {ml_minus:.0f} ml**")
-elif current_ph < 7.0 and expected_ph_after_klor < 7.0:
-    delta_to_raise = target_ph - expected_ph_after_klor
-    ml_plus = 49 * delta_to_raise * volume
-    st.subheader(f"Hæv pH med {delta_to_raise:.2f} (efter klor)")
-    st.markdown(f"**pH-plus → {ml_plus:.0f} ml**")
-else:
-    st.success("pH er på eller tæt på målet efter klor – ingen PH-justering nødvendig")
 
 if current_cl > 6.0:
     mg_to_lower = current_cl - target_cl_leave
