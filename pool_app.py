@@ -94,7 +94,7 @@ colA, colB = st.columns(2)
 with colA:
     current_ph = st.number_input("Nuværende pH", min_value=0.0, value=7.0, step=0.1)
 with colB:
-    current_cl = st.number_input("Nuværende frit klor (mg/l)", min_value=0.0, value=0.0, step=0.1)
+    current_cl = st.number_input("Nuværende frit klor (mg/l)", min_value=0.0, value=4.0, step=0.1)
 
 st.markdown(
     """
