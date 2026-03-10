@@ -88,7 +88,7 @@ def load_pools():
 
 pools, pool_info = load_pools()
 
-# Tilføj ny pool til Sheet – rettet rækkefølge
+# Tilføj ny pool til Sheet – korrekt rækkefølge
 def add_pool(name, vol):
     sheet.append_row([name, vol, "", name, "", "", ""])
 
@@ -103,90 +103,44 @@ if pool_list:
     selected = st.selectbox("Vælg pool fra listen", pool_list)
     volume = pools[selected]
     info = pool_info.get(selected, {})
+    st.caption(f"**{selected} – {volume:.1f} m³**")
+    info_lines = []
+    ordered_keys = ["Adresse", "Nøglebokskode", "HE telefonnummer", "Pumpetype", "Returskyl (5 min)"]
+    for key in ordered_keys:
+        if key in info:
+            info_lines.append(f"{key}: {info[key]}")
+    for key in info:
+        if key not in ordered_keys:
+            info_lines.append(f"{key}: {info[key]}")
+    if info_lines:
+        st.caption(" | ".join(info_lines))
 else:
     st.info("Ingen pools fundet i Google Sheet – tilføj nogle i Sheetet først")
-    selected = None
-    volume = 0.0
-    info = {}
-
-# Foldbar tilføjelse af ny pool – under vælgeren
-with st.expander("Tilføj ny pool", expanded=False):
-    col1, col2 = st.columns([3, 2])
-    with col1:
-        new_name = st.text_input("Nyt pool-navn")
-    with col2:
-        new_vol = st.number_input("Volumen (m³)", min_value=0.0, value=0.0, step=1.0)
-   
-    if st.button("Gem ny pool"):
-        if new_name.strip():
-            add_pool(new_name.strip(), new_vol)
-            st.success(f"{new_name.strip()} tilføjet til Google Sheet (Adresse sat til samme som navn)")
-            st.rerun()
-        else:
-            st.error("Du skal indtaste et pool-navn")
-
-if not pool_list:
     st.stop()
 
-# Stor header med pool-navn og volumen (kun her)
 st.header(f"{selected} - {volume:.1f} m³")
 
-# Vis ekstra info under headeren – med fast rækkefølge
-ordered_keys = ["Adresse", "Nøglebokskode", "HE telefonnummer", "Pumpetype", "Returskyl (5 min)"]
-info_lines = []
-for key in ordered_keys:
-    if key in info:
-        info_lines.append(f"{key}: {info[key]}")
-for key in info:
-    if key not in ordered_keys:
-        info_lines.append(f"{key}: {info[key]}")
-if info_lines:
-    st.caption(" | ".join(info_lines))
-
-# Husets status – før målinger
 leased = st.radio("Husets status", ["Ikke udlejet", "Udlejet"], horizontal=True)
 
-# Målinger
 colA, colB = st.columns(2)
 with colA:
     current_ph = st.number_input("Nuværende pH", min_value=0.0, value=7.0, step=0.1)
 with colB:
     current_cl = st.number_input("Nuværende frit klor (mg/l)", min_value=0.0, value=0.0, step=0.1)
 
-# Advarsel om klorgas – kun ved pH 4.0–6.9 + opkloring (gul), under 4.0 (rød/alvorlig)
-delta_cl_leave = max(0, 4.0 - current_cl)  # Mål 4.0 mg/l
-if delta_cl_leave > 0:
-    if current_ph < 4.0:
-        st.error(
-            "**ALVORLIG ADVARSEL: EKSTREMT LAV pH + KLOR-TILSÆTNING!**\n\n"
-            "Risiko for frigivelse af **farlig klorgas** er meget høj!\n\n"
-            "- STOP! Mål pH igen og hæv den til mindst 7.0 FØR du tilsætter klor.\n"
-            "- Brug aldrig klor og pH-minus samtidig.\n"
-            "- Opløs klor i spand vand, tilsæt langsomt, sørg for god cirkulation og frisk luft.\n"
-            "- Forlad området hvis du mærker lugt af klor eller åndedrætsbesvær.\n"
-            "- Kontakt giftlinjen ved symptomer!"
-        )
-    elif 4.0 <= current_ph <= 6.9:
-        st.warning(
-            "**Advarsel: Lav pH + klor-tilsætning kan frigive klorgas!**\n\n"
-            "- Sørg for pH er mindst 7.0 før du tilsætter klor.\n"
-            "- Opløs klor i spand vand først, tilsæt langsomt ud for dyserne.\n"
-            "- Sørg for god cirkulation og frisk luft i poolhuset.\n"
-            "- Mål igen efter 30–60 minutter."
-        )
-
-# Checkbox og selectbox
-has_existing_stick = st.checkbox("**Der ligger allerede en Tempo Stick i skimmer/klorinator**", value=False)
-
-# Vejledning lige efter checkbox
 st.markdown(
     """
-    <div style="font-size: 0.9rem; color: #666; margin-top: -8px; margin-bottom: 0.5rem;">
-    - Afkryds kun feltet hvis der er mindst 0.5 stick tilbage
+    <div style="font-size: 1.05rem; color: #444; margin-bottom: 0.8rem;">
+    <strong>Vigtigt om Tempo Sticks:</strong><br>
+    - Afkryds kun feltet hvis der er mindst 0.5 stick tilbage<br>
+    - Tempo Sticks skal altid placeres i KLORINATOREN eller i SKIMMEREN via en Tempo Stick Dispenser - aldrig direkte i skimmeren eller poolen!<br>
+    - Ved eksisterende sticks skal du vælge 1 eller 2
     </div>
     """,
     unsafe_allow_html=True
 )
+
+has_existing_stick = st.checkbox("Der ligger allerede Tempo Stick(s) i poolen (min. 0.5 stick tilbage)", value=False)
 
 existing_sticks = None
 if has_existing_stick:
@@ -206,26 +160,17 @@ if has_existing_stick:
             unsafe_allow_html=True
         )
 
-# Vejledningstekst under checkbox/selectbox
-st.markdown(
-    """
-    <div style="font-size: 1.05rem; color: #444; margin-bottom: 0.8rem;">
-    <strong>Vigtigt om Tempo Sticks:</strong><br>
-    - Tempo Sticks skal altid placeres i KLORINATOREN eller i SKIMMEREN via en Tempo Stick Dispenser - aldrig direkte i skimmeren eller poolen!
-    </div>
-    """,
-    unsafe_allow_html=True
-)
-
 target_ph = 7.0
 target_cl_leave = 4.0
 target_cl_maintenance = 5.5 if leased == "Udlejet" else 3.8
 
 delta_ph = current_ph - target_ph
 
-delta_cl_leave = max(0, target_cl_leave - current_cl)
+# Rettet opkloringslogik: Hvis klor <= 0.3 → op til 6.0 mg/l, ellers op til 4.0 mg/l
+target_klor_op = 6.0 if current_cl <= 0.3 else 4.0
+delta_cl_leave = max(0, target_klor_op - current_cl)
 
-# Beregn nyt klor-niveau EFTER opkloring med Briquetter
+# Beregn nyt klor-niveau EFTER opkloring
 new_cl_after_leave = current_cl + delta_cl_leave
 
 delta_cl_maint = 0.0
@@ -239,10 +184,10 @@ if not has_existing_stick and leased == "Udlejet":
             klor_per_stick_25m3 = 8.0
             raise_here = klor_per_stick_25m3 * (25.0 / volume)
             sticks_needed = delta_cl_maint / raise_here
-            sticks_needed = max(1, round(sticks_needed)) # Mindst 1 stick
+            sticks_needed = round(sticks_needed)
             ph_rise_from_sticks = 0.4 * sticks_needed * (25.0 / volume)
         else:
-            sticks_needed = 1 # Mindst 1 stick selv hvis delta er 0
+            sticks_needed = 1  # Mindst 1 stick selv hvis delta er 0
             ph_rise_from_sticks = 0.4 * sticks_needed * (25.0 / volume)
     else:
         sticks_needed = 0
