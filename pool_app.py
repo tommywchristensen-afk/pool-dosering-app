@@ -13,7 +13,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 # ────────────────────────────────────────────────
 
 SHEET_ID = "1J7hqPcK7rpRwrjaYAhKh5jDpk8tNYKhfM3_7FWCY2rA"
-WORKSHEET_NAME = "Sheet1" # Ændr til "Ark1" hvis dit ark hedder det på dansk
+WORKSHEET_NAME = "Sheet1"  # Ændr til "Ark1" hvis dit ark hedder det på dansk
 
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 
@@ -71,17 +71,6 @@ if pool_list:
     selected = st.selectbox("Vælg pool fra listen", pool_list)
     volume = pools[selected]
     info = pool_info.get(selected, {})
-    st.caption(f"**{selected} – {volume:.1f} m³**")
-    info_lines = []
-    ordered_keys = ["Adresse", "Nøglebokskode", "HE telefonnummer", "Pumpetype", "Returskyl (5 min)"]
-    for key in ordered_keys:
-        if key in info:
-            info_lines.append(f"{key}: {info[key]}")
-    for key in info:
-        if key not in ordered_keys:
-            info_lines.append(f"{key}: {info[key]}")
-    if info_lines:
-        st.caption(" | ".join(info_lines))
 else:
     st.info("Ingen pools fundet i Google Sheet – tilføj nogle i Sheetet først")
     selected = None
@@ -103,6 +92,20 @@ with st.expander("Tilføj ny pool", expanded=False):
             st.rerun()
         else:
             st.error("Du skal indtaste et pool-navn")
+
+# Info om valgt pool – nu UNDER expanderen
+if selected:
+    st.caption(f"**{selected} – {volume:.1f} m³**")
+    info_lines = []
+    ordered_keys = ["Adresse", "Nøglebokskode", "HE telefonnummer", "Pumpetype", "Returskyl (5 min)"]
+    for key in ordered_keys:
+        if key in info:
+            info_lines.append(f"{key}: {info[key]}")
+    for key in info:
+        if key not in ordered_keys:
+            info_lines.append(f"{key}: {info[key]}")
+    if info_lines:
+        st.caption(" | ".join(info_lines))
 
 if not pool_list:
     st.stop()
