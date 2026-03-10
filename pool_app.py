@@ -13,7 +13,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 # ────────────────────────────────────────────────
 
 SHEET_ID = "1J7hqPcK7rpRwrjaYAhKh5jDpk8tNYKhfM3_7FWCY2rA"
-WORKSHEET_NAME = "Sheet1" # Ændr til "Ark1" hvis dit ark hedder det på dansk
+WORKSHEET_NAME = "Sheet1"  # Ændr til "Ark1" hvis dit ark hedder det på dansk
 
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 
@@ -37,7 +37,7 @@ def load_pools():
             except (ValueError, TypeError):
                 vol = 0.0
             pools[name] = vol
-          
+           
             # Hent ALLE kolonner som ekstra info
             extra = {}
             for key, value in row.items():
@@ -94,7 +94,7 @@ colA, colB = st.columns(2)
 with colA:
     current_ph = st.number_input("Nuværende pH", min_value=0.0, value=7.0, step=0.1)
 with colB:
-    current_cl = st.number_input("Nuværende frit klor (mg/l)", min_value=0.0, value=0.0, step=0.1)
+    current_cl = st.number_input("Nuværende frit klor (mg/l)", min_value=0.0, value=4.0, step=0.1)
 
 st.markdown(
     """
@@ -214,7 +214,7 @@ else:
         briqs_round = round(briqs)
         new_cl = current_cl + delta_cl_leave
        
-        st.subheader(f"Opkloring til {target_cl_leave} mg/l ved afgang")
+        st.subheader(f"Opkloring til {target_klor_op} mg/l ved afgang")
         st.markdown(f"**HTH Briquetter/Daytabs: {briqs:.1f} stk → afrund til {briqs_round} stk**")
         st.caption(f"→ doserer klor fra {current_cl:.1f} mg/l til {new_cl:.1f} mg/l")
 
