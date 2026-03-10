@@ -204,22 +204,20 @@ total_ph_rise_from_klor = ph_rise_from_briqs + ph_rise_from_sticks
 # Justeret delta_ph efter klor-tilsætning
 adjusted_delta_ph = delta_ph - total_ph_rise_from_klor
 
-# PH-justering – kun hvis justeret delta er signifikant
-if current_ph >= 7.0:
-    # pH er allerede på eller over målet – ingen justering overhovedet
-    st.success("pH er allerede på eller over målet – ingen pH-justering nødvendig (selv efter klor)")
-elif adjusted_delta_ph > 0.05:
-    # pH er for højt efter klor – sænk
-    ml_minus = 35 * adjusted_delta_ph * volume
-    st.subheader(f"Sænk pH med {adjusted_delta_ph:.2f} (efter klor)")
-    st.markdown(f"**pH-minus → {ml_minus:.0f} ml**")
-elif adjusted_delta_ph < -0.05:
-    # pH er for lav efter klor – hæv
-    ml_plus = 49 * (-adjusted_delta_ph) * volume
-    st.subheader(f"Hæv pH med {-adjusted_delta_ph:.2f} (efter klor)")
-    st.markdown(f"**pH-plus → {ml_plus:.0f} ml**")
+# PH-justering – ALTID reguler til 7.0, men kun hvis der er behov efter klor
+if current_ph > 7.0 or (current_ph < 7.0 and adjusted_delta_ph != 0):
+    if adjusted_delta_ph > 0.05:
+        ml_minus = 35 * adjusted_delta_ph * volume
+        st.subheader(f"Sænk pH med {adjusted_delta_ph:.2f} (efter klor)")
+        st.markdown(f"**pH-minus → {ml_minus:.0f} ml**")
+    elif adjusted_delta_ph < -0.05:
+        ml_plus = 49 * (-adjusted_delta_ph) * volume
+        st.subheader(f"Hæv pH med {-adjusted_delta_ph:.2f} (efter klor)")
+        st.markdown(f"**pH-plus → {ml_plus:.0f} ml**")
+    else:
+        st.success("pH er allerede på eller meget tæt på målet – ingen pH-justering nødvendig")
 else:
-    st.success("pH ser fin ud efter klor-tilsætning - ingen pH-justering nødvendig")
+    st.success("pH er allerede på målet – ingen pH-justering nødvendig")
 
 delta_ph_eff = adjusted_delta_ph
 
