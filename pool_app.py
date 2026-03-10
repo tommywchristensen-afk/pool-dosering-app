@@ -7,17 +7,6 @@
 import streamlit as st
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-import os
-from datetime import datetime
-
-# Automatisk versionsnummer: vÅÅÅÅMMDD (sidste ændring af pool_app.py)
-def get_auto_version():
-    file_path = __file__  # Denne fil selv
-    timestamp = os.path.getmtime(file_path)
-    dt = datetime.fromtimestamp(timestamp)
-    return f"v{dt.strftime('%Y%m%d')}"
-
-VERSION = get_auto_version()
 
 # ────────────────────────────────────────────────
 # Google Sheets opsætning – DIT SHEET-ID
@@ -205,11 +194,16 @@ total_ph_rise_from_klor = ph_rise_from_briqs + ph_rise_from_sticks
 adjusted_delta_ph = delta_ph - total_ph_rise_from_klor
 
 # PH-justering – kun hvis justeret delta er signifikant
-if adjusted_delta_ph > 0.05:  # pH er for højt efter klor
+if current_ph >= 7.0:
+    # pH er allerede på eller over målet – ingen justering overhovedet
+    st.success("pH er allerede på eller over målet – ingen pH-justering nødvendig (selv efter klor)")
+elif adjusted_delta_ph > 0.05:
+    # pH er for højt efter klor – sænk
     ml_minus = 35 * adjusted_delta_ph * volume
     st.subheader(f"Sænk pH med {adjusted_delta_ph:.2f} (efter klor)")
     st.markdown(f"**pH-minus → {ml_minus:.0f} ml**")
-elif adjusted_delta_ph < -0.05:  # pH er for lav efter klor
+elif adjusted_delta_ph < -0.05:
+    # pH er for lav efter klor – hæv
     ml_plus = 49 * (-adjusted_delta_ph) * volume
     st.subheader(f"Hæv pH med {-adjusted_delta_ph:.2f} (efter klor)")
     st.markdown(f"**pH-plus → {ml_plus:.0f} ml**")
