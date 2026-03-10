@@ -3,7 +3,6 @@
 # Denne kode og det tilhørende koncept er udviklet til brug for service teknikere ansat hos Sol og Strand.
 # Alle rettigheder forbeholdes. Må ikke kopieres, distribueres, modificeres, sælges eller på anden måde anvendes
 # kommercielt eller deles offentligt uden skriftlig tilladelse fra ophavsmanden.
-# Copyright-teksten er fjernet fra synlig output og findes kun her som usynlig kommentar.
 
 import streamlit as st
 import gspread
@@ -35,61 +34,42 @@ creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["gcp_service
 client = gspread.authorize(creds)
 sheet = client.open_by_key(SHEET_ID).worksheet(WORKSHEET_NAME)
 
-# Hent pools fra Sheet – med get_all_values() for at bevare ledende nuller i nøglebokskoder
+# Hent pools fra Sheet
 def load_pools():
-    values = sheet.get_all_values()
-    if not values:
-        return {}, {}
-    
-    headers = [h.strip() for h in values[0]] if values else []
-    
+    records = sheet.get_all_records()
     pools = {}
     pool_info = {}
-    
-    for row in values[1:]:
-        if not row or not row[0].strip(): continue
-        
-        name = row[0].strip()
-        if not name: continue
-        
-        vol_idx = headers.index("Volumen (m3)") if "Volumen (m3)" in headers else 1
-        adresse_idx = headers.index("Adresse") if "Adresse" in headers else 2
-        pumpetype_idx = headers.index("Pumpetype") if "Pumpetype" in headers else 3
-        returskyl_idx = headers.index("Returskyl (5 min)") if "Returskyl (5 min)" in headers else 4
-        nøglebokskode_idx = headers.index("Nøglebokskode") if "Nøglebokskode" in headers else 5
-        he_idx = headers.index("HE telefonnummer") if "HE telefonnummer" in headers else 6
-        
-        vol_str = row[vol_idx] if vol_idx < len(row) else "0"
-        try:
-            vol = float(vol_str)
-        except (ValueError, TypeError):
-            vol = 0.0
-        
-        pools[name] = vol
-        
-        extra = {}
-        if adresse_idx < len(row): extra["Adresse"] = row[adresse_idx] or "Ikke angivet"
-        if pumpetype_idx < len(row): extra["Pumpetype"] = row[pumpetype_idx] or "Ikke angivet"
-        if returskyl_idx < len(row) and row[returskyl_idx]:
+    for row in records:
+        name = row.get("Pool Navn", "").strip()
+        if name:
+            vol_str = row.get("Volumen (m3)", "0")
             try:
-                liter = float(row[returskyl_idx])
-                kubik = liter / 1000
-                extra["Returskyl (5 min)"] = f"{int(liter)} liter / {kubik:.1f} m³"
-            except ValueError:
-                extra["Returskyl (5 min)"] = row[returskyl_idx]
-        else:
-            extra["Returskyl (5 min)"] = "Ikke angivet"
-        if nøglebokskode_idx < len(row): extra["Nøglebokskode"] = row[nøglebokskode_idx] or "Ikke angivet"
-        if he_idx < len(row): extra["HE telefonnummer"] = row[he_idx] or "Ikke angivet"
-        
-        pool_info[name] = extra
-    
+                vol = float(vol_str)
+            except (ValueError, TypeError):
+                vol = 0.0
+            pools[name] = vol
+           
+            # Hent ALLE kolonner som ekstra info
+            extra = {}
+            for key, value in row.items():
+                if key not in ["Pool Navn", "Volumen (m3)"]:
+                    if key == "Returskyl (5 min)" and value:
+                        try:
+                            liter = float(value)
+                            kubik = liter / 1000
+                            extra[key] = f"{int(liter)} liter / {kubik:.1f} m³"
+                        except (ValueError, TypeError):
+                            extra[key] = value
+                    else:
+                        extra[key] = value if value else "Ikke angivet"
+            pool_info[name] = extra
     return pools, pool_info
 
 pools, pool_info = load_pools()
 
-# Tilføj ny pool til Sheet – korrekt rækkefølge
+# Tilføj ny pool til Sheet – rettet rækkefølge for at matche typisk layout
 def add_pool(name, vol):
+    # Rækkefølge: Pool Navn, Volumen, Pumpetype (tom), Adresse (name), Returskyl (tom), Nøglebokskode (tom), HE telefonnummer (tom)
     sheet.append_row([name, vol, "", name, "", "", ""])
 
 st.set_page_config(page_title="Pool Dosering", layout="wide")
@@ -192,34 +172,36 @@ if not has_existing_stick and leased == "Udlejet":
     else:
         sticks_needed = 0
 
-# Forventet pH-stigning fra Briquetter/Daytabs (ca. 0.15 per stk ved 25 m³)
+# Forventet pH-stigning fra Briquetter/Daytabs (ca. 0.25 per stk ved lav startklor og høj dosis)
 ph_rise_from_briqs = 0.0
 if delta_cl_leave > 0:
     briqs = 0.21 * delta_cl_leave * volume
-    ph_rise_from_briqs = 0.15 * briqs * (25.0 / volume)  # tilnærmelse
+    ph_rise_from_briqs = 0.25 * briqs * (25.0 / volume)  # højere tilnærmelse ved start fra 0 klor
 
 # Samlet forventet pH-stigning fra klor-tilsætning
 total_ph_rise_from_klor = ph_rise_from_briqs + ph_rise_from_sticks
 
-# Justeret delta_ph efter klor-tilsætning
-adjusted_delta_ph = delta_ph - total_ph_rise_from_klor
+# Forventet PH efter klor-tilsætning
+expected_ph_after_klor = current_ph + total_ph_rise_from_klor
 
-# PH-justering – ALTID reguler til 7.0 hvis PH før eller efter klor er over 7.0
-if current_ph > 7.0 or adjusted_delta_ph > 0:
+# PH-justering – reguler ALTID til 7.0 hvis PH før eller efter klor er over 7.0
+if current_ph > 7.0 or expected_ph_after_klor > 7.0:
     # PH er over eller bliver over 7.0 – sænk med pH-minus (mere hvis klor hæver yderligere)
-    ml_minus = 35 * max(adjusted_delta_ph, current_ph - target_ph) * volume
-    st.subheader(f"Sænk pH med {max(adjusted_delta_ph, current_ph - target_ph):.2f} (efter klor)")
+    delta_to_correct = max(current_ph - target_ph, expected_ph_after_klor - target_ph)
+    ml_minus = 35 * delta_to_correct * volume
+    st.subheader(f"Sænk pH med {delta_to_correct:.2f} (efter klor)")
     st.markdown(f"**pH-minus → {ml_minus:.0f} ml**")
-elif current_ph < 7.0 and adjusted_delta_ph < 0:
+elif current_ph < 7.0 and expected_ph_after_klor < 7.0:
     # PH er under 7.0 og klor hæver ikke nok til at komme over – hæv med pH-plus
-    ml_plus = 49 * (-adjusted_delta_ph) * volume
-    st.subheader(f"Hæv pH med {-adjusted_delta_ph:.2f} (efter klor)")
+    delta_to_correct = target_ph - min(current_ph, expected_ph_after_klor)
+    ml_plus = 49 * delta_to_correct * volume
+    st.subheader(f"Hæv pH med {delta_to_correct:.2f} (efter klor)")
     st.markdown(f"**pH-plus → {ml_plus:.0f} ml**")
 else:
     # PH er på eller tæt på 7.0 – ingen justering
     st.success("pH er på eller tæt på målet efter klor – ingen PH-justering nødvendig")
 
-delta_ph_eff = adjusted_delta_ph
+delta_ph_eff = expected_ph_after_klor - target_ph  # Bruges kun til intern beregning hvis nødvendigt
 
 st.markdown(
     """
