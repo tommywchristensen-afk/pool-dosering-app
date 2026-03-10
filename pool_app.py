@@ -7,17 +7,6 @@
 import streamlit as st
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-import os
-from datetime import datetime
-
-# Automatisk versionsnummer: vÅÅÅÅMMDD (sidste ændring af pool_app.py)
-def get_auto_version():
-    file_path = __file__  # Denne fil selv
-    timestamp = os.path.getmtime(file_path)
-    dt = datetime.fromtimestamp(timestamp)
-    return f"v{dt.strftime('%Y%m%d')}"
-
-VERSION = get_auto_version()
 
 # ────────────────────────────────────────────────
 # Google Sheets opsætning – DIT SHEET-ID
@@ -34,7 +23,7 @@ creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["gcp_service
 client = gspread.authorize(creds)
 sheet = client.open_by_key(SHEET_ID).worksheet(WORKSHEET_NAME)
 
-# Hent pools fra Sheet – med get_all_values() for at bevare ledende nuller i nøglebokskoder
+# Hent pools fra Sheet – med get_all_values() for at bevare ledende nuller
 def load_pools():
     values = sheet.get_all_values()
     if not values:
@@ -201,8 +190,20 @@ if delta_cl_leave > 0:
 # Samlet forventet pH-stigning fra klor-tilsætning
 total_ph_rise_from_klor = ph_rise_from_briqs + ph_rise_from_sticks
 
-# Justeret delta_ph efter klor-tilsætning
+# Justeret delta_ph efter klor-tilsætning (træk stigningen fra)
 adjusted_delta_ph = delta_ph - total_ph_rise_from_klor
+
+# PH-justering – kun hvis justeret delta er signifikant
+if abs(adjusted_delta_ph) < 0.05:
+    st.success("pH ser fin ud efter klor-tilsætning - ingen pH-justering nødvendig")
+elif adjusted_delta_ph > 0:
+    ml_minus = 35 * adjusted_delta_ph * volume
+    st.subheader(f"Sænk pH med {adjusted_delta_ph:.2f} (efter klor)")
+    st.markdown(f"**pH-minus → {ml_minus:.0f} ml**")
+else:
+    ml_plus = 49 * (-adjusted_delta_ph) * volume
+    st.subheader(f"Hæv pH med {-adjusted_delta_ph:.2f} (efter klor)")
+    st.markdown(f"**pH-plus → {ml_plus:.0f} ml**")
 
 delta_ph_eff = adjusted_delta_ph
 
