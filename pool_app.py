@@ -84,6 +84,27 @@ if pool_list:
         st.caption(" | ".join(info_lines))
 else:
     st.info("Ingen pools fundet i Google Sheet – tilføj nogle i Sheetet først")
+    selected = None
+    volume = 0.0
+    info = {}
+
+# Foldbar tilføjelse af ny pool – lige under poolvælgeren, intet imellem
+with st.expander("Tilføj ny pool", expanded=False):
+    col1, col2 = st.columns([3, 2])
+    with col1:
+        new_name = st.text_input("Nyt pool-navn")
+    with col2:
+        new_vol = st.number_input("Volumen (m³)", min_value=0.0, value=0.0, step=1.0)
+    
+    if st.button("Gem ny pool"):
+        if new_name.strip():
+            add_pool(new_name.strip(), new_vol)
+            st.success(f"{new_name.strip()} tilføjet til Google Sheet (Adresse sat til samme som navn)")
+            st.rerun()
+        else:
+            st.error("Du skal indtaste et pool-navn")
+
+if not pool_list:
     st.stop()
 
 st.header(f"{selected} - {volume:.1f} m³")
