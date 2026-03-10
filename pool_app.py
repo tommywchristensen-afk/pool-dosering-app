@@ -7,17 +7,6 @@
 import streamlit as st
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-import os
-from datetime import datetime
-
-# Automatisk versionsnummer: vÅÅÅÅMMDD (sidste ændring af pool_app.py)
-def get_auto_version():
-    file_path = __file__ # Denne fil selv
-    timestamp = os.path.getmtime(file_path)
-    dt = datetime.fromtimestamp(timestamp)
-    return f"v{dt.strftime('%Y%m%d')}"
-
-VERSION = get_auto_version()
 
 # ────────────────────────────────────────────────
 # Google Sheets opsætning – DIT SHEET-ID
@@ -254,13 +243,3 @@ elif new_cl_after_leave <= 4.0:
     st.caption("Tempo Sticks skal altid placeres i KLORINATOREN eller i SKIMMEREN via en Tempo Stick Dispenser - aldrig direkte i skimmeren eller poolen!")
 else:
     st.info("Klor efter opkloring er over 4.0 mg/l – ingen nye Tempo Sticks nødvendige til vedligehold.")
-
-# Versionsnummer i bunden (minimalt og korrekt f-string)
-st.markdown(
-    f"""
-    <div style="font-size: 0.85rem; color: #555; text-align: center; margin-top: 2rem; padding: 1rem;">
-    Version: {VERSION}
-    </div>
-    """,
-    unsafe_allow_html=True
-)
