@@ -13,7 +13,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 # ────────────────────────────────────────────────
 
 SHEET_ID = "1J7hqPcK7rpRwrjaYAhKh5jDpk8tNYKhfM3_7FWCY2rA"
-WORKSHEET_NAME = "Sheet1"  # Ændr til "Ark1" hvis dit ark hedder det på dansk
+WORKSHEET_NAME = "Sheet1" # Ændr til "Ark1" hvis dit ark hedder det på dansk
 
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 
@@ -23,35 +23,62 @@ creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["gcp_service
 client = gspread.authorize(creds)
 sheet = client.open_by_key(SHEET_ID).worksheet(WORKSHEET_NAME)
 
-# Hent pools fra Sheet
+# Hent pools fra Sheet – NU MED get_all_values() for at bevare ledende nuller i nøglebokskoder
 def load_pools():
-    records = sheet.get_all_records()
+    values = sheet.get_all_values()  # Læser alt som rå tekst (bevarer "009" som "009")
+    if not values:
+        return {}, {}
+
+    headers = [h.strip() for h in values[0]] if values else []
+
     pools = {}
     pool_info = {}
-    for row in records:
-        name = row.get("Pool Navn", "").strip()
-        if name:
-            vol_str = row.get("Volumen (m3)", "0")
+
+    for row in values[1:]:
+        if not row or not row[0].strip():
+            continue
+
+        name = row[0].strip()
+        if not name:
+            continue
+
+        # Find kolonne-indeks dynamisk (sikker mod ændringer i rækkefølge)
+        vol_idx = headers.index("Volumen (m3)") if "Volumen (m3)" in headers else 1
+        adresse_idx = headers.index("Adresse") if "Adresse" in headers else 2
+        nøglebokskode_idx = headers.index("Nøglebokskode") if "Nøglebokskode" in headers else 5
+        he_idx = headers.index("HE telefonnummer") if "HE telefonnummer" in headers else 6
+        pumpetype_idx = headers.index("Pumpetype") if "Pumpetype" in headers else 3
+        returskyl_idx = headers.index("Returskyl (5 min)") if "Returskyl (5 min)" in headers else 4
+
+        vol_str = row[vol_idx] if vol_idx < len(row) else "0"
+        try:
+            vol = float(vol_str)
+        except (ValueError, TypeError):
+            vol = 0.0
+
+        pools[name] = vol
+
+        extra = {}
+        if adresse_idx < len(row):
+            extra["Adresse"] = row[adresse_idx] or "Ikke angivet"
+        if nøglebokskode_idx < len(row):
+            extra["Nøglebokskode"] = row[nøglebokskode_idx] or "Ikke angivet"  # Ledende nuller bevares
+        if he_idx < len(row):
+            extra["HE telefonnummer"] = row[he_idx] or "Ikke angivet"
+        if pumpetype_idx < len(row):
+            extra["Pumpetype"] = row[pumpetype_idx] or "Ikke angivet"
+        if returskyl_idx < len(row) and row[returskyl_idx]:
             try:
-                vol = float(vol_str)
-            except (ValueError, TypeError):
-                vol = 0.0
-            pools[name] = vol
-          
-            # Hent ALLE kolonner som ekstra info
-            extra = {}
-            for key, value in row.items():
-                if key not in ["Pool Navn", "Volumen (m3)"]:
-                    if key == "Returskyl (5 min)" and value:
-                        try:
-                            liter = float(value)
-                            kubik = liter / 1000
-                            extra[key] = f"{int(liter)} liter / {kubik:.1f} m³"
-                        except (ValueError, TypeError):
-                            extra[key] = value
-                    else:
-                        extra[key] = value if value else "Ikke angivet"
-            pool_info[name] = extra
+                liter = float(row[returskyl_idx])
+                kubik = liter / 1000
+                extra["Returskyl (5 min)"] = f"{int(liter)} liter / {kubik:.1f} m³"
+            except ValueError:
+                extra["Returskyl (5 min)"] = row[returskyl_idx]
+        else:
+            extra["Returskyl (5 min)"] = "Ikke angivet"
+
+        pool_info[name] = extra
+
     return pools, pool_info
 
 pools, pool_info = load_pools()
@@ -71,35 +98,6 @@ if pool_list:
     selected = st.selectbox("Vælg pool fra listen", pool_list)
     volume = pools[selected]
     info = pool_info.get(selected, {})
-else:
-    st.info("Ingen pools fundet i Google Sheet – tilføj nogle i Sheetet først")
-    selected = None
-    volume = 0.0
-    info = {}
-
-# Foldbar tilføjelse af ny pool – lige under poolvælgeren
-with st.expander("Tilføj ny pool", expanded=False):
-    col1, col2 = st.columns([3, 2])
-    with col1:
-        new_name = st.text_input("Nyt pool-navn")
-    with col2:
-        new_vol = st.number_input("Volumen (m³)", min_value=0.0, value=0.0, step=1.0)
-    
-    if st.button("Gem ny pool"):
-        if new_name.strip():
-            add_pool(new_name.strip(), new_vol)
-            st.success(f"{new_name.strip()} tilføjet til Google Sheet (Adresse sat til samme som navn)")
-            st.rerun()
-        else:
-            st.error("Du skal indtaste et pool-navn")
-
-if not pool_list:
-    st.stop()
-
-st.header(f"{selected} - {volume:.1f} m³")
-
-# Info om valgt pool – nu lige over "Husets status"
-if selected:
     st.caption(f"**{selected} – {volume:.1f} m³**")
     info_lines = []
     ordered_keys = ["Adresse", "Nøglebokskode", "HE telefonnummer", "Pumpetype", "Returskyl (5 min)"]
@@ -111,6 +109,13 @@ if selected:
             info_lines.append(f"{key}: {info[key]}")
     if info_lines:
         st.caption(" | ".join(info_lines))
+else:
+    st.info("Ingen pools fundet i Google Sheet – tilføj nogle i Sheetet først")
+    selected = None
+    volume = 0.0
+    info = {}
+
+st.header(f"{selected} - {volume:.1f} m³")
 
 leased = st.radio("Husets status", ["Ikke udlejet", "Udlejet"], horizontal=True)
 
