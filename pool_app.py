@@ -7,13 +7,24 @@
 import streamlit as st
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
+import os
+from datetime import datetime
+
+# Automatisk versionsnummer: vÅÅÅÅMMDD (sidste ændring af pool_app.py)
+def get_auto_version():
+    file_path = __file__ # Denne fil selv
+    timestamp = os.path.getmtime(file_path)
+    dt = datetime.fromtimestamp(timestamp)
+    return f"v{dt.strftime('%Y%m%d')}"
+
+VERSION = get_auto_version()
 
 # ────────────────────────────────────────────────
 # Google Sheets opsætning – DIT SHEET-ID
 # ────────────────────────────────────────────────
 
 SHEET_ID = "1J7hqPcK7rpRwrjaYAhKh5jDpk8tNYKhfM3_7FWCY2rA"
-WORKSHEET_NAME = "Sheet1"  # Ændr til "Ark1" hvis dit ark hedder det på dansk
+WORKSHEET_NAME = "Sheet1" # Ændr til "Ark1" hvis dit ark hedder det på dansk
 
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 
@@ -37,7 +48,7 @@ def load_pools():
             except (ValueError, TypeError):
                 vol = 0.0
             pools[name] = vol
-           
+          
             # Hent ALLE kolonner som ekstra info
             extra = {}
             for key, value in row.items():
@@ -213,7 +224,7 @@ if current_cl > 6.0:
     mg_to_lower = current_cl - target_cl_leave
     antiklor_per_m3_per_mg = 0.83
     antiklor_total = antiklor_per_m3_per_mg * mg_to_lower * volume
-    
+   
     st.subheader(f"Sænkning af klor (for højt: {current_cl:.1f} mg/l)")
     st.markdown(f"**Anti-klor: {antiklor_total:.0f} gram/ml**")
     st.caption(f"→ sænker klor fra {current_cl:.1f} mg/l til {target_cl_leave} mg/l")
@@ -225,7 +236,7 @@ else:
         briqs = 0.21 * delta_cl_leave * volume
         briqs_round = round(briqs)
         new_cl = current_cl + delta_cl_leave
-        
+       
         st.subheader(f"Opkloring til {target_klor_op} mg/l ved afgang")
         st.markdown(f"**HTH Briquetter/Daytabs: {briqs:.1f} stk → afrund til {briqs_round} stk**")
         st.caption(f"→ doserer klor fra {current_cl:.1f} mg/l til {new_cl:.1f} mg/l")
