@@ -7,17 +7,6 @@
 import streamlit as st
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-import os
-from datetime import datetime
-
-# Automatisk versionsnummer: vÅÅÅÅMMDD (sidste ændring af pool_app.py)
-def get_auto_version():
-    file_path = __file__  # Denne fil selv
-    timestamp = os.path.getmtime(file_path)
-    dt = datetime.fromtimestamp(timestamp)
-    return f"v{dt.strftime('%Y%m%d')}"
-
-VERSION = get_auto_version()
 
 # ────────────────────────────────────────────────
 # Google Sheets opsætning – DIT SHEET-ID
@@ -48,21 +37,19 @@ def load_pools():
             except (ValueError, TypeError):
                 vol = 0.0
             pools[name] = vol
-            
-            # Hent ALLE kolonner som ekstra info
-            extra = {}
-            for key, value in row.items():
-                if key not in ["Pool Navn", "Volumen (m3)"]:
-                    if key == "Returskyl (5 min)" and value:
-                        try:
-                            liter = float(value)
-                            kubik = liter / 1000
-                            extra[key] = f"{int(liter)} liter / {kubik:.1f} m³"
-                        except (ValueError, TypeError):
-                            extra[key] = value
-                    else:
-                        extra[key] = value if value else "Ikke angivet"
-            pool_info[name] = extra
+            vol_str = row.get("Volumen (m3)", "0")
+            try:
+                vol = float(vol_str)
+            except (ValueError, TypeError):
+                vol = 0.0
+            pools[name] = vol
+            pool_info[name] = {
+                "Adresse": row.get("Adresse", "Ikke angivet"),
+                "Nøglebokskode": row.get("Nøglebokskode", "Ikke angivet"),
+                "HE telefonnummer": row.get("HE telefonnummer", "Ikke angivet"),
+                "Pumpetype": row.get("Pumpetype", "Ikke angivet"),
+                "Returskyl (5 min)": row.get("Returskyl (5 min)", "Ikke angivet")
+            }
     return pools, pool_info
 
 pools, pool_info = load_pools()
@@ -225,13 +212,12 @@ elif delta_cl_maint > 0:
 else:
     st.info("Klor er allerede højt nok til vedligehold – ingen nye Tempo Sticks nødvendige")
 
-# Copyright + automatisk versionsnummer i bunden
+# Copyright i bunden
 st.markdown(
-    f"""
+    """
     <div style="font-size: 0.85rem; color: #555; text-align: center; margin-top: 2rem; padding: 1rem; border-top: 1px solid #ddd; background-color: #f5f5f5;">
     © 2026 Tommy Christensen, Laur Larsensgade 13, STTH, 4800 Nykøbing F.<br>
     E-mail: tommywchristensen@gmail.com<br>
-    Version: {VERSION}<br>
     Denne applikation og dens koncept er udviklet til brug for service teknikere ansat hos Sol og Strand.<br>
     Alle rettigheder forbeholdes. Må ikke kopieres, distribueres, modificeres, sælges eller på anden måde anvendes<br>
     kommercielt eller deles offentligt uden skriftlig tilladelse fra ophavsmanden.
