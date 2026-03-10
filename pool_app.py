@@ -13,7 +13,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 # ────────────────────────────────────────────────
 
 SHEET_ID = "1J7hqPcK7rpRwrjaYAhKh5jDpk8tNYKhfM3_7FWCY2rA"
-WORKSHEET_NAME = "Sheet1" # Ændr til "Ark1" hvis dit ark hedder det på dansk
+WORKSHEET_NAME = "Sheet1"  # Ændr til "Ark1" hvis dit ark hedder det på dansk
 
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 
@@ -37,7 +37,7 @@ def load_pools():
             except (ValueError, TypeError):
                 vol = 0.0
             pools[name] = vol
-          
+           
             # Hent ALLE kolonner som ekstra info
             extra = {}
             for key, value in row.items():
@@ -94,7 +94,7 @@ colA, colB = st.columns(2)
 with colA:
     current_ph = st.number_input("Nuværende pH", min_value=0.0, value=7.0, step=0.1)
 with colB:
-    current_cl = st.number_input("Nuværende frit klor (mg/l)", min_value=0.0, value=4.0, step=0.1)
+    current_cl = st.number_input("Nuværende frit klor (mg/l)", min_value=0.0, value=0.0, step=0.1)
 
 st.markdown(
     """
@@ -170,7 +170,16 @@ if not has_existing_stick and leased == "Udlejet":
     else:
         sticks_needed = 0
 
-delta_ph_eff = delta_ph + ph_rise_from_sticks
+# Forventet pH-stigning fra Briquetter/Daytabs – fra dit Excel-ark: 0.05 per 1 mg/l klor-stigning
+ph_rise_from_briqs = delta_cl_leave * 0.05
+
+# Samlet forventet pH-stigning fra klor-tilsætning
+total_ph_rise_from_klor = ph_rise_from_briqs + ph_rise_from_sticks
+
+# Forventet PH efter klor-tilsætning
+expected_ph_after_klor = current_ph + total_ph_rise_from_klor
+
+delta_ph_eff = expected_ph_after_klor - target_ph
 
 st.markdown(
     """
@@ -186,22 +195,25 @@ st.markdown(
 
 st.header("Anbefalet dosering")
 
-if abs(delta_ph_eff) < 0.05:
-    st.success("pH ser fin ud - ingen justering nødvendig")
-elif delta_ph_eff > 0:
-    ml_minus = 35 * delta_ph_eff * volume
-    st.subheader(f"Sænk pH med {delta_ph_eff:.2f}")
+# PH-justering – reguler til 7.0 hvis PH før eller efter klor er over/under 7.0
+if current_ph > 7.0 or expected_ph_after_klor > 7.0:
+    delta_to_reduce = max(current_ph - target_ph, expected_ph_after_klor - target_ph)
+    ml_minus = 35 * delta_to_reduce * volume
+    st.subheader(f"Sænk pH med {delta_to_reduce:.2f} (efter klor)")
     st.markdown(f"**pH-minus → {ml_minus:.0f} ml**")
-else:
-    ml_plus = 49 * (-delta_ph_eff) * volume
-    st.subheader(f"Hæv pH med {-delta_ph_eff:.2f}")
+elif current_ph < 7.0 and expected_ph_after_klor < 7.0:
+    delta_to_raise = target_ph - expected_ph_after_klor
+    ml_plus = 49 * delta_to_raise * volume
+    st.subheader(f"Hæv pH med {delta_to_raise:.2f} (efter klor)")
     st.markdown(f"**pH-plus → {ml_plus:.0f} ml**")
+else:
+    st.success("pH er på eller tæt på målet efter klor – ingen PH-justering nødvendig")
 
 if current_cl > 6.0:
     mg_to_lower = current_cl - target_cl_leave
     antiklor_per_m3_per_mg = 0.83
     antiklor_total = antiklor_per_m3_per_mg * mg_to_lower * volume
-   
+    
     st.subheader(f"Sænkning af klor (for højt: {current_cl:.1f} mg/l)")
     st.markdown(f"**Anti-klor: {antiklor_total:.0f} gram/ml**")
     st.caption(f"→ sænker klor fra {current_cl:.1f} mg/l til {target_cl_leave} mg/l")
@@ -213,7 +225,7 @@ else:
         briqs = 0.21 * delta_cl_leave * volume
         briqs_round = round(briqs)
         new_cl = current_cl + delta_cl_leave
-       
+        
         st.subheader(f"Opkloring til {target_klor_op} mg/l ved afgang")
         st.markdown(f"**HTH Briquetter/Daytabs: {briqs:.1f} stk → afrund til {briqs_round} stk**")
         st.caption(f"→ doserer klor fra {current_cl:.1f} mg/l til {new_cl:.1f} mg/l")
