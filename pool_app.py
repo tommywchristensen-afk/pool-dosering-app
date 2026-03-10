@@ -7,6 +7,17 @@
 import streamlit as st
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
+import os
+from datetime import datetime
+
+# Automatisk versionsnummer: vÅÅÅÅMMDD (sidste ændring af pool_app.py)
+def get_auto_version():
+    file_path = __file__  # Denne fil selv
+    timestamp = os.path.getmtime(file_path)
+    dt = datetime.fromtimestamp(timestamp)
+    return f"v{dt.strftime('%Y%m%d')}"
+
+VERSION = get_auto_version()
 
 # ────────────────────────────────────────────────
 # Google Sheets opsætning – DIT SHEET-ID
@@ -23,7 +34,7 @@ creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["gcp_service
 client = gspread.authorize(creds)
 sheet = client.open_by_key(SHEET_ID).worksheet(WORKSHEET_NAME)
 
-# Hent pools fra Sheet – med get_all_values() for at bevare ledende nuller
+# Hent pools fra Sheet – med get_all_values() for at bevare ledende nuller i nøglebokskoder
 def load_pools():
     values = sheet.get_all_values()
     if not values:
@@ -155,8 +166,6 @@ target_cl_maintenance = 5.5 if leased == "Udlejet" else 3.8
 
 delta_ph = current_ph - target_ph
 
-delta_cl_leave = max(0, target_cl_leave - current_cl)
-
 # Rettet opkloringslogik: Hvis klor <= 0.3 → op til 6.0 mg/l, ellers op til 4.0 mg/l
 target_klor_op = 6.0 if current_cl <= 0.3 else 4.0
 delta_cl_leave = max(0, target_klor_op - current_cl)
@@ -168,14 +177,22 @@ delta_cl_maint = 0.0
 sticks_needed = 0.0
 ph_rise_from_sticks = 0.0
 
-if delta_cl_maint > 0:
-    klor_per_stick_25m3 = 8.0
-    raise_here = klor_per_stick_25m3 * (25.0 / volume)
-    sticks_needed = delta_cl_maint / raise_here
-    sticks_needed = round(sticks_needed)
-    ph_rise_from_sticks = 0.4 * sticks_needed * (25.0 / volume)
+if not has_existing_stick and leased == "Udlejet":
+    if new_cl_after_leave <= 4.0:
+        delta_cl_maint = max(0, target_cl_maintenance - new_cl_after_leave)
+        if delta_cl_maint > 0:
+            klor_per_stick_25m3 = 8.0
+            raise_here = klor_per_stick_25m3 * (25.0 / volume)
+            sticks_needed = delta_cl_maint / raise_here
+            sticks_needed = round(sticks_needed)
+            ph_rise_from_sticks = 0.4 * sticks_needed * (25.0 / volume)
+        else:
+            sticks_needed = 1  # Mindst 1 stick selv hvis delta er 0
+            ph_rise_from_sticks = 0.4 * sticks_needed * (25.0 / volume)
+    else:
+        sticks_needed = 0
 
-# Forventet pH-stigning fra Briquetter/Daytabs (ca. 0.15 per stk ved 25 m³ – juster hvis nødvendigt)
+# Forventet pH-stigning fra Briquetter/Daytabs (ca. 0.15 per stk ved 25 m³)
 ph_rise_from_briqs = 0.0
 if delta_cl_leave > 0:
     briqs = 0.21 * delta_cl_leave * volume
