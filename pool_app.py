@@ -77,7 +77,7 @@ else:
     volume = 0.0
     info = {}
 
-# Foldbar tilføjelse af ny pool – lige under poolvælgeren, intet imellem
+# Foldbar tilføjelse af ny pool – lige under poolvælgeren
 with st.expander("Tilføj ny pool", expanded=False):
     col1, col2 = st.columns([3, 2])
     with col1:
@@ -93,7 +93,12 @@ with st.expander("Tilføj ny pool", expanded=False):
         else:
             st.error("Du skal indtaste et pool-navn")
 
-# Info om valgt pool – nu UNDER expanderen
+if not pool_list:
+    st.stop()
+
+st.header(f"{selected} - {volume:.1f} m³")
+
+# Info om valgt pool – nu lige over "Husets status"
 if selected:
     st.caption(f"**{selected} – {volume:.1f} m³**")
     info_lines = []
@@ -106,11 +111,6 @@ if selected:
             info_lines.append(f"{key}: {info[key]}")
     if info_lines:
         st.caption(" | ".join(info_lines))
-
-if not pool_list:
-    st.stop()
-
-st.header(f"{selected} - {volume:.1f} m³")
 
 leased = st.radio("Husets status", ["Ikke udlejet", "Udlejet"], horizontal=True)
 
