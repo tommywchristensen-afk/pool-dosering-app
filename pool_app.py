@@ -67,7 +67,7 @@ def load_pools():
 
 pools, pool_info = load_pools()
 
-# Tilføj ny pool til Sheet – rettet rækkefølge for at matche typisk layout
+# Tilføj ny pool til Sheet – Adresse = Pool Navn, resten tom
 def add_pool(name, vol):
     # Rækkefølge: Pool Navn, Volumen, Pumpetype (tom), Adresse (name), Returskyl (tom), Nøglebokskode (tom), HE telefonnummer (tom)
     sheet.append_row([name, vol, "", name, "", "", ""])
@@ -137,8 +137,16 @@ with colB:
     current_cl = st.number_input("Nuværende frit klor (mg/l)", min_value=0.0, value=0.0, step=0.1)
 
 # Advarsel om klorgas – kun ved pH 4.0–6.9 + opkloring (gul), under 4.0 (rød/alvorlig)
-delta_cl_leave = max(0, 4.0 - current_cl)  # Mål 4.0 mg/l
+delta_cl_leave = max(0, 4.0 - current_cl)  # Basis-mål 4.0 mg/l
 
+# Rettet opkloringslogik: Hvis klor < 0.3 → op til 6.0 mg/l, ellers op til 4.0 mg/l
+target_klor_op = 6.0 if current_cl < 0.3 else 4.0
+delta_cl_leave = max(0, target_klor_op - current_cl)
+
+# Beregn nyt klor-niveau EFTER opkloring
+new_cl_after_leave = current_cl + delta_cl_leave
+
+# Advarsel om klorgas
 if delta_cl_leave > 0:
     if current_ph < 4.0:
         st.error(
@@ -202,14 +210,9 @@ st.markdown(
 )
 
 target_ph = 7.0
-target_cl_leave = 4.0
 target_cl_maintenance = 4.0  # Mål ved vedligehold (udlejet hus)
 
 delta_ph = current_ph - target_ph
-delta_cl_leave = max(0, target_cl_leave - current_cl)
-
-# Beregn nyt klor-niveau EFTER opkloring med Briquetter
-new_cl_after_leave = current_cl + delta_cl_leave
 
 delta_cl_maint = 0.0
 sticks_needed = 0.0
@@ -275,7 +278,7 @@ else:
         briqs_round = round(briqs)
         new_cl = current_cl + delta_cl_leave
         
-        st.subheader(f"Opkloring til {target_cl_leave} mg/l ved afgang")
+        st.subheader(f"Opkloring til {target_klor_op} mg/l ved afgang")
         st.markdown(f"**HTH Briquetter/Daytabs: {briqs:.1f} stk → afrund til {briqs_round} stk**")
         st.caption(f"→ doserer klor fra {current_cl:.1f} mg/l til {new_cl:.1f} mg/l")
 
