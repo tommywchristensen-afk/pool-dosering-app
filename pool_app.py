@@ -1,4 +1,4 @@
-# Copyright © 2026 Tommy Christensen, Laur Larsensgade 13, STTH, 4800 Nykøbing F.
+# Copyright © 2026 FairPool v/Tommy Christensen, Laur Larsensgade 13, STTH, 4800 Nykøbing F.
 # E-mail: tommywchristensen@gmail.com
 # Denne kode og det tilhørende koncept er udviklet til brug for service teknikere ansat hos Sol og Strand.
 # Alle rettigheder forbeholdes. Må ikke kopieres, distribueres, modificeres, sælges eller på anden måde anvendes
@@ -323,3 +323,4 @@ elif new_cl_after_leave <= 4.0:
     st.caption("Tempo Sticks skal altid placeres i KLORINATOREN eller i SKIMMEREN via en Tempo Stick Dispenser - aldrig direkte i skimmeren eller poolen!")
 else:
     st.info("Klor efter opkloring er over 4.0 mg/l – ingen nye Tempo Sticks nødvendige til vedligehold.")
+
