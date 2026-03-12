@@ -3,55 +3,94 @@
 # Denne kode og det tilhørende koncept er udviklet til brug for service teknikere ansat hos Sol og Strand.
 # Alle rettigheder forbeholdes. Må ikke kopieres, distribueres, modificeres, sælges eller på anden måde anvendes
 # kommercielt eller deles offentligt uden skriftlig tilladelse fra ophavsmanden.
+
 import streamlit as st
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
+
 # ────────────────────────────────────────────────
 # Google Sheets opsætning – DIT SHEET-ID
 # ────────────────────────────────────────────────
+
 SHEET_ID = "1J7hqPcK7rpRwrjaYAhKh5jDpk8tNYKhfM3_7FWCY2rA"
 WORKSHEET_NAME = "Sheet1" # Ændr til "Ark1" hvis dit ark hedder det på dansk
+
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+
 # Brug Streamlit Secrets til credentials (på cloud)
 creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["gcp_service_account"], scope)
+
 client = gspread.authorize(creds)
 sheet = client.open_by_key(SHEET_ID).worksheet(WORKSHEET_NAME)
-# Hent pools fra Sheet
+
+# Hent pools fra Sheet – NU MED get_all_values() for at bevare ledende nuller i nøglebokskoder
 def load_pools():
-    records = sheet.get_all_records()
+    values = sheet.get_all_values()  # Læser alt som rå tekst (bevarer "009" som "009")
+    if not values:
+        return {}, {}
+
+    headers = [h.strip() for h in values[0]] if values else []
+
     pools = {}
     pool_info = {}
-    for row in records:
-        name = row.get("Pool Navn", "").strip()
-        if name:
-            vol_str = row.get("Volumen (m3)", "0")
+
+    for row in values[1:]:
+        if not row or not row[0].strip():
+            continue
+
+        name = row[0].strip()
+        if not name:
+            continue
+
+        # Find kolonne-indeks dynamisk
+        vol_idx = headers.index("Volumen (m3)") if "Volumen (m3)" in headers else 1
+        adresse_idx = headers.index("Adresse") if "Adresse" in headers else 2
+        nøglebokskode_idx = headers.index("Nøglebokskode") if "Nøglebokskode" in headers else 5
+        he_idx = headers.index("HE telefonnummer") if "HE telefonnummer" in headers else 6
+        pumpetype_idx = headers.index("Pumpetype") if "Pumpetype" in headers else 3
+        returskyl_idx = headers.index("Returskyl (5 min)") if "Returskyl (5 min)" in headers else 4
+
+        vol_str = row[vol_idx] if vol_idx < len(row) else "0"
+        try:
+            vol = float(vol_str)
+        except (ValueError, TypeError):
+            vol = 0.0
+
+        pools[name] = vol
+
+        extra = {}
+        if adresse_idx < len(row):
+            extra["Adresse"] = row[adresse_idx] or "Ikke angivet"
+        if nøglebokskode_idx < len(row):
+            extra["Nøglebokskode"] = row[nøglebokskode_idx] or "Ikke angivet"  # Ledende nuller bevares her
+        if he_idx < len(row):
+            extra["HE telefonnummer"] = row[he_idx] or "Ikke angivet"
+        if pumpetype_idx < len(row):
+            extra["Pumpetype"] = row[pumpetype_idx] or "Ikke angivet"
+        if returskyl_idx < len(row) and row[returskyl_idx]:
             try:
-                vol = float(vol_str)
-            except (ValueError, TypeError):
-                vol = 0.0
-            pools[name] = vol
-         
-            # Hent ALLE kolonner som ekstra info
-            extra = {}
-            for key, value in row.items():
-                if key not in ["Pool Navn", "Volumen (m3)"]:
-                    if key == "Returskyl (5 min)" and value:
-                        try:
-                            liter = float(value)
-                            kubik = liter / 1000
-                            extra[key] = f"{int(liter)} liter / {kubik:.1f} m³"
-                        except (ValueError, TypeError):
-                            extra[key] = value
-                    else:
-                        extra[key] = value if value else "Ikke angivet"
-            pool_info[name] = extra
+                liter = float(row[returskyl_idx])
+                kubik = liter / 1000
+                extra["Returskyl (5 min)"] = f"{int(liter)} liter / {kubik:.1f} m³"
+            except ValueError:
+                extra["Returskyl (5 min)"] = row[returskyl_idx]
+        else:
+            extra["Returskyl (5 min)"] = "Ikke angivet"
+
+        pool_info[name] = extra
+
     return pools, pool_info
+
 pools, pool_info = load_pools()
+
 # Tilføj ny pool til Sheet – rettet rækkefølge
 def add_pool(name, vol):
     sheet.append_row([name, vol, "", name, "", "", ""])
+
 st.set_page_config(page_title="Pool Dosering", layout="wide")
+
 st.title("Pool Dosering - HTH Briquetter & Tempo Sticks")
+
 # Pool valg – øverst
 st.header("Pool")
 pool_list = list(pools.keys())
@@ -59,31 +98,6 @@ if pool_list:
     selected = st.selectbox("Vælg pool fra listen", pool_list)
     volume = pools[selected]
     info = pool_info.get(selected, {})
-else:
-    st.info("Ingen pools fundet i Google Sheet – tilføj nogle i Sheetet først")
-    selected = None
-    volume = 0.0
-    info = {}
-# Foldbar tilføjelse af ny pool – lige under poolvælgeren
-with st.expander("Tilføj ny pool", expanded=False):
-    col1, col2 = st.columns([3, 2])
-    with col1:
-        new_name = st.text_input("Nyt pool-navn")
-    with col2:
-        new_vol = st.number_input("Volumen (m³)", min_value=0.0, value=0.0, step=1.0)
-   
-    if st.button("Gem ny pool"):
-        if new_name.strip():
-            add_pool(new_name.strip(), new_vol)
-            st.success(f"{new_name.strip()} tilføjet til Google Sheet (Adresse sat til samme som navn)")
-            st.rerun()
-        else:
-            st.error("Du skal indtaste et pool-navn")
-if not pool_list:
-    st.stop()
-st.header(f"{selected} - {volume:.1f} m³")
-# Info om valgt pool – nu lige over "Husets status"
-if selected:
     st.caption(f"**{selected} – {volume:.1f} m³**")
     info_lines = []
     ordered_keys = ["Adresse", "Nøglebokskode", "HE telefonnummer", "Pumpetype", "Returskyl (5 min)"]
@@ -95,12 +109,22 @@ if selected:
             info_lines.append(f"{key}: {info[key]}")
     if info_lines:
         st.caption(" | ".join(info_lines))
+else:
+    st.info("Ingen pools fundet i Google Sheet – tilføj nogle i Sheetet først")
+    selected = None
+    volume = 0.0
+    info = {}
+
+st.header(f"{selected} - {volume:.1f} m³")
+
 leased = st.radio("Husets status", ["Ikke udlejet", "Udlejet"], horizontal=True)
+
 colA, colB = st.columns(2)
 with colA:
     current_ph = st.number_input("Nuværende pH", min_value=0.0, value=7.0, step=0.1)
 with colB:
     current_cl = st.number_input("Nuværende frit klor (mg/l)", min_value=0.0, value=0.0, step=0.1)
+
 st.markdown(
     """
     <div style="font-size: 1.05rem; color: #444; margin-bottom: 0.8rem;">
@@ -112,7 +136,9 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
 has_existing_stick = st.checkbox("**Der ligger allerede en Tempo Stick i skimmer/klorinator**", value=False)
+
 # Vejledning lige efter checkbox
 st.markdown(
     """
@@ -122,6 +148,7 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
 existing_sticks = None
 if has_existing_stick:
     existing_sticks = st.selectbox(
@@ -139,18 +166,24 @@ if has_existing_stick:
             """,
             unsafe_allow_html=True
         )
+
 target_ph = 7.0
 target_cl_leave = 4.0
 target_cl_maintenance = 5.5 if leased == "Udlejet" else 3.8
+
 delta_ph = current_ph - target_ph
+
 # Rettet opkloringslogik: Hvis klor <= 0.3 → op til 6.0 mg/l, ellers op til 4.0 mg/l
 target_klor_op = 6.0 if current_cl <= 0.3 else 4.0
 delta_cl_leave = max(0, target_klor_op - current_cl)
+
 # Beregn nyt klor-niveau EFTER opkloring
 new_cl_after_leave = current_cl + delta_cl_leave
+
 delta_cl_maint = 0.0
 sticks_needed = 0.0
 ph_rise_from_sticks = 0.0
+
 if not has_existing_stick and leased == "Udlejet":
     if new_cl_after_leave <= 4.0:
         delta_cl_maint = max(0, target_cl_maintenance - new_cl_after_leave)
@@ -165,13 +198,18 @@ if not has_existing_stick and leased == "Udlejet":
             ph_rise_from_sticks = 0.4 * sticks_needed * (25.0 / volume)
     else:
         sticks_needed = 0
+
 # Forventet pH-stigning fra Briquetter/Daytabs – fra dit Excel-ark: 0.05 per 1 mg/l klor-stigning
 ph_rise_from_briqs = delta_cl_leave * 0.05
+
 # Samlet forventet pH-stigning fra klor-tilsætning
 total_ph_rise_from_klor = ph_rise_from_briqs + ph_rise_from_sticks
+
 # Forventet PH efter klor-tilsætning
 expected_ph_after_klor = current_ph + total_ph_rise_from_klor
+
 delta_ph_eff = expected_ph_after_klor - target_ph
+
 st.markdown(
     """
     <div style="background-color: #fff3cd; border-left: 6px solid #ffc107; padding: 1.2rem; margin: 1rem 0; border-radius: 6px; font-size: 1.15rem; color: #664d03;">
@@ -183,7 +221,9 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
 st.header("Anbefalet dosering")
+
 # PH-justering – reguler til 7.0 hvis PH før eller efter klor er over/under 7.0
 if current_ph > 7.0 or expected_ph_after_klor > 7.0:
     delta_to_reduce = max(current_ph - target_ph, expected_ph_after_klor - target_ph)
@@ -197,11 +237,12 @@ elif current_ph < 7.0 and expected_ph_after_klor < 7.0:
     st.markdown(f"**pH-plus → {ml_plus:.0f} ml**")
 else:
     st.success("pH er på eller tæt på målet efter klor – ingen PH-justering nødvendig")
+
 if current_cl > 6.0:
     mg_to_lower = current_cl - target_cl_leave
     antiklor_per_m3_per_mg = 0.83
     antiklor_total = antiklor_per_m3_per_mg * mg_to_lower * volume
-  
+   
     st.subheader(f"Sænkning af klor (for højt: {current_cl:.1f} mg/l)")
     st.markdown(f"**Anti-klor: {antiklor_total:.0f} gram/ml**")
     st.caption(f"→ sænker klor fra {current_cl:.1f} mg/l til {target_cl_leave} mg/l")
@@ -213,11 +254,13 @@ else:
         briqs = 0.21 * delta_cl_leave * volume
         briqs_round = round(briqs)
         new_cl = current_cl + delta_cl_leave
-      
+       
         st.subheader(f"Opkloring til {target_klor_op} mg/l ved afgang")
         st.markdown(f"**HTH Briquetter/Daytabs: {briqs:.1f} stk → afrund til {briqs_round} stk**")
         st.caption(f"→ doserer klor fra {current_cl:.1f} mg/l til {new_cl:.1f} mg/l")
+
 st.subheader("Vedligehold - Tempo Sticks (5-7 dage)")
+
 if has_existing_stick:
     st.info(f"Der ligger allerede {existing_sticks} stk → ingen nye sticks foreslået")
 elif leased == "Ikke udlejet":
