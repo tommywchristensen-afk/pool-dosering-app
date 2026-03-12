@@ -85,12 +85,10 @@ def add_pool(name, vol):
 
 st.set_page_config(page_title="Pool Dosering", layout="wide")
 
-# FairPool-logo øverst til venstre
-col_logo, col_title = st.columns([1, 5])
-with col_logo:
-    st.image("https://freeimage.host/i/qai6KmJ", width=180)  # justér width efter behov (f.eks. 150-220)
-with col_title:
-    st.title("App til dosering af kemi til pools i Sol og Strand")
+# Centreret logo øverst i appen (FairPool)
+st.markdown("<div style='text-align: center; margin-bottom: 10px;'><img src='https://iili.io/qai6KmJ.jpg' width='250' alt='FairPool logo'></div>", unsafe_allow_html=True)
+
+st.title("App til dosering af kemi til pools i Sol og Strand")
 
 # Pool valg – øverst (ingen header "Pool" imellem titel og vælger)
 pool_list = list(pools.keys())
