@@ -39,10 +39,6 @@ def load_pools():
        
         name = row[0].strip()
         if not name: continue
-
-        # Ignorer pools hvis navnet starter med bindestreg (din konvention for inaktive pools)
-        if name.startswith("-"):
-            continue
        
         vol_idx = headers.index("Volumen (m3)") if "Volumen (m3)" in headers else 1
         vol_str = row[vol_idx] if vol_idx < len(row) else "0"
@@ -142,6 +138,33 @@ with colA:
     current_ph = st.number_input("Nuværende pH", min_value=0.0, value=7.0, step=0.1)
 with colB:
     current_cl = st.number_input("Nuværende frit klor (mg/l)", min_value=0.0, value=0.0, step=0.1)
+
+# ────────────────────────────────────────────────
+# KLORGAS-ADVARSEL – vises hvis pH er lav OG der skal tilsættes klor
+# ────────────────────────────────────────────────
+if current_cl < target_cl_leave:  # der skal tilsættes klor
+    if current_ph < 6.5:
+        st.error(
+            "**STOP! ALVORLIG RISIKO FOR DØDELIG KLORGAS!**\n\n"
+            "pH er under 6.5 og du skal tilsætte klor → der kan dannes **giftig klorgas (Cl₂)** øjeblikkeligt!\n"
+            "Klorgas er farlig og kan være **dødelig** selv i små mængder.\n\n"
+            "**GØR IKKE noget med klor før pH er hævet!**\n"
+            "- Hæv pH til mindst 7.0–7.2 med pH-plus **FØR** du overvejer klor.\n"
+            "- Mål pH igen efter hævning – fortsæt kun hvis pH er over 6.8.\n"
+            "- Arbejd i godt ventileret område, brug åndedrætsværn hvis nødvendigt.\n"
+            "- Ved tvivl: kontakt fagperson eller giftlinjen."
+        )
+    elif current_ph < 7.0:
+        st.warning(
+            "**Advarsel – lav pH og klor-tilsætning**\n\n"
+            "pH er under 7.0 og der skal tilsættes klor → der er risiko for dannelse af **klorgas**.\n"
+            "Risikoen stiger jo lavere pH er.\n\n"
+            "**Anbefaling:**\n"
+            "- Hæv pH til mindst 7.0–7.2 med pH-plus **før** du tilsætter klor.\n"
+            "- Tilsæt klor langsomt og med god cirkulation.\n"
+            "- Sørg for god ventilation i poolrummet.\n"
+            "- Mål pH igen efter hævning, før du fortsætter."
+        )
 
 st.markdown(
     """
