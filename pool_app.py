@@ -1,4 +1,4 @@
-# Copyright © 2026 Tommy Christensen, Laur Larsensgade 13, STTH, 4800 Nykøbing F.
+# Copyright © 2026 FairPool v/Tommy Christensen, Laur Larsensgade 13, STTH, 4800 Nykøbing F.
 # E-mail: tommywchristensen@gmail.com
 # Denne kode og det tilhørende koncept er udviklet til brug for service teknikere ansat hos Sol og Strand.
 # Alle rettigheder forbeholdes. Må ikke kopieres, distribueres, modificeres, sælges eller på anden måde anvendes
@@ -85,10 +85,7 @@ def add_pool(name, vol):
 
 st.set_page_config(page_title="Pool Dosering", layout="wide")
 
-# Centreret logo øverst i appen (FairPool)
-st.markdown("<div style='text-align: center; margin-bottom: 10px;'><img src='https://iili.io/qai6KmJ.jpg' width='250' alt='FairPool logo'></div>", unsafe_allow_html=True)
-
-st.title("App til dosering af kemi til pools i Sol og Strand")
+st.title("App til pool-kemi")
 
 # Pool valg – øverst (ingen header "Pool" imellem titel og vælger)
 pool_list = list(pools.keys())
