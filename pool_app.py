@@ -86,13 +86,11 @@ def add_pool(name, vol):
 st.set_page_config(page_title="Pool Dosering", layout="wide")
 
 # FairPool-logo helt til venstre øverst
-col_logo, col_title = st.columns([1, 5])
+col_logo, col_empty = st.columns([1, 5])
 with col_logo:
     st.image("https://iili.io/qai6KmJ.jpg", width=180)  # justér width efter behov (f.eks. 150-220)
-with col_title:
-    st.markdown("<h2 style='margin: 0; padding-top: 10px;'>App til pool-kemi</h2>", unsafe_allow_html=True)
 
-# Pool valg – øverst (ingen header "Pool" imellem titel og vælger)
+# Pool valg – øverst (ingen overskrift imellem logo og vælger)
 pool_list = list(pools.keys())
 if pool_list:
     selected = st.selectbox("Vælg pool fra listen", pool_list)
@@ -323,4 +321,3 @@ elif new_cl_after_leave <= 4.0:
     st.caption("Tempo Sticks skal altid placeres i KLORINATOREN eller i SKIMMEREN via en Tempo Stick Dispenser - aldrig direkte i skimmeren eller poolen!")
 else:
     st.info("Klor efter opkloring er over 4.0 mg/l – ingen nye Tempo Sticks nødvendige til vedligehold.")
-
