@@ -87,8 +87,7 @@ st.set_page_config(page_title="Pool Dosering", layout="wide")
 
 st.title("App til dosering af kemi til pools i Sol og Strand")
 
-# Pool valg – øverst
-st.header("Pool")
+# Pool valg – øverst (ingen header "Pool" imellem titel og vælger)
 pool_list = list(pools.keys())
 if pool_list:
     selected = st.selectbox("Vælg pool fra listen", pool_list)
