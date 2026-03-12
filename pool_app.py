@@ -85,6 +85,9 @@ def add_pool(name, vol):
 
 st.set_page_config(page_title="Pool Dosering", layout="wide")
 
+# Centreret logo øverst i appen (FairPool)
+st.markdown("<div style='text-align: center; margin-bottom: 10px;'><img src='https://files.catbox.moe/3p0v8q.png' width='250' alt='FairPool logo'></div>", unsafe_allow_html=True)
+
 st.title("App til dosering af kemi til pools i Sol og Strand")
 
 # Pool valg – øverst (ingen header "Pool" imellem titel og vælger)
