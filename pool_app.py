@@ -1,8 +1,10 @@
 # Copyright © 2026 FairPool v/Tommy Christensen, Laur Larsensgade 13, STTH, 4800 Nykøbing F.
 # E-mail: tommywchristensen@gmail.com
-# Denne kode og det tilhørende koncept er udviklet til brug for service teknikere ansat hos Sol og Strand.
-# Alle rettigheder forbeholdes. Må ikke kopieres, distribueres, modificeres, sælges eller på anden måde anvendes
-# kommercielt eller deles offentligt uden skriftlig tilladelse fra ophavsmanden.
+# Denne app og dens underliggende kode/koncept er udviklet af FairPool v/Tommy Christensen.
+# Alle rettigheder forbeholdes FairPool v/Tommy Christensen.
+# Service-teknikere ansat hos Sol og Strand har tilladelse til at bruge appen uden beregning i forbindelse med deres arbejde.
+# Må ikke kopieres, distribueres, modificeres, sælges eller på anden måde anvendes kommercielt eller deles offentligt
+# uden skriftlig tilladelse fra FairPool v/Tommy Christensen.
 
 import streamlit as st
 import gspread
