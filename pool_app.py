@@ -28,34 +28,38 @@ def load_pools():
     values = sheet.get_all_values()
     if not values:
         return {}, {}
-    
+   
     headers = [h.strip() for h in values[0]] if values else []
-    
+   
     pools = {}
     pool_info = {}
-    
+   
     for row in values[1:]:
         if not row or not row[0].strip(): continue
-        
+       
         name = row[0].strip()
         if not name: continue
-        
+
+        # Ignorer pools hvis navnet starter med bindestreg (din konvention for inaktive pools)
+        if name.startswith("-"):
+            continue
+       
         vol_idx = headers.index("Volumen (m3)") if "Volumen (m3)" in headers else 1
         vol_str = row[vol_idx] if vol_idx < len(row) else "0"
         try:
             vol = float(vol_str)
         except (ValueError, TypeError):
             vol = 0.0
-        
+       
         pools[name] = vol
-        
+       
         extra = {}
         adresse_idx = headers.index("Adresse") if "Adresse" in headers else 2
         pumpetype_idx = headers.index("Pumpetype") if "Pumpetype" in headers else 3
         returskyl_idx = headers.index("Returskyl (5 min)") if "Returskyl (5 min)" in headers else 4
         nøglebokskode_idx = headers.index("Nøglebokskode") if "Nøglebokskode" in headers else 5
         he_idx = headers.index("HE telefonnummer") if "HE telefonnummer" in headers else 6
-        
+       
         if adresse_idx < len(row): extra["Adresse"] = row[adresse_idx] or "Ikke angivet"
         if pumpetype_idx < len(row): extra["Pumpetype"] = row[pumpetype_idx] or "Ikke angivet"
         if returskyl_idx < len(row) and row[returskyl_idx]:
@@ -63,17 +67,16 @@ def load_pools():
                 liter = float(row[returskyl_idx])
                 kubik = liter / 1000
                 extra["Returskyl (5 min)"] = f"{int(liter)} liter / {kubik:.1f} m³"
-            except ValueError:
+            except (ValueError):
                 extra["Returskyl (5 min)"] = row[returskyl_idx]
         else:
             extra["Returskyl (5 min)"] = "Ikke angivet"
         if nøglebokskode_idx < len(row): extra["Nøglebokskode"] = row[nøglebokskode_idx] or "Ikke angivet"
         if he_idx < len(row): extra["HE telefonnummer"] = row[he_idx] or "Ikke angivet"
-        
+       
         pool_info[name] = extra
-    
+   
     return pools, pool_info
-
 pools, pool_info = load_pools()
 
 # Tilføj ny pool til Sheet – rettet rækkefølge
@@ -104,7 +107,7 @@ with st.expander("Tilføj ny pool", expanded=False):
         new_name = st.text_input("Nyt pool-navn")
     with col2:
         new_vol = st.number_input("Volumen (m³)", min_value=0.0, value=0.0, step=1.0)
-   
+  
     if st.button("Gem ny pool"):
         if new_name.strip():
             add_pool(new_name.strip(), new_vol)
@@ -257,7 +260,7 @@ if current_cl > 6.0:
     mg_to_lower = current_cl - target_cl_leave
     antiklor_per_m3_per_mg = 0.83
     antiklor_total = antiklor_per_m3_per_mg * mg_to_lower * volume
-   
+  
     st.subheader(f"Sænkning af klor (for højt: {current_cl:.1f} mg/l)")
     st.markdown(f"**Anti-klor: {antiklor_total:.0f} gram/ml**")
     st.caption(f"→ sænker klor fra {current_cl:.1f} mg/l til {target_cl_leave} mg/l")
@@ -269,13 +272,12 @@ else:
         briqs = 0.21 * delta_cl_leave * volume
         briqs_round = round(briqs)
         new_cl = current_cl + delta_cl_leave
-       
+      
         st.subheader(f"Opkloring til {target_klor_op} mg/l ved afgang")
         st.markdown(f"**HTH Briquetter/Daytabs: {briqs:.1f} stk → afrund til {briqs_round} stk**")
         st.caption(f"→ doserer klor fra {current_cl:.1f} mg/l til {new_cl:.1f} mg/l")
 
 st.subheader("Vedligehold - Tempo Sticks (5-7 dage)")
-
 if has_existing_stick:
     st.info(f"Der ligger allerede {existing_sticks} stk → ingen nye sticks foreslået")
 elif leased == "Ikke udlejet":
