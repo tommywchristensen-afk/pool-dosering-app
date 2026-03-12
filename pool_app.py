@@ -85,12 +85,7 @@ def add_pool(name, vol):
 
 st.set_page_config(page_title="Pool Dosering", layout="wide")
 
-# Logo fra sologstrand.dk – øverst til venstre
-col_logo, col_title = st.columns([1, 5])
-with col_logo:
-    st.image("https://www.sologstrand.dk/wp-content/uploads/2023/05/sologstrand-logo.svg", width=150)
-with col_title:
-    st.title("Pool Dosering - HTH Briquetter & Tempo Sticks")
+st.title("Pool Dosering - HTH Briquetter & Tempo Sticks")
 
 # Pool valg – øverst
 st.header("Pool")
