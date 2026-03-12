@@ -36,26 +36,30 @@ def load_pools():
    
     for row in values[1:]:
         if not row or not row[0].strip(): continue
-       
+      
         name = row[0].strip()
         if not name: continue
-       
+      
+        # Ignorer pools hvis navnet starter med bindestreg (din konvention for inaktive pools)
+        if name.startswith("-"):
+            continue
+      
         vol_idx = headers.index("Volumen (m3)") if "Volumen (m3)" in headers else 1
         vol_str = row[vol_idx] if vol_idx < len(row) else "0"
         try:
             vol = float(vol_str)
         except (ValueError, TypeError):
             vol = 0.0
-       
+      
         pools[name] = vol
-       
+      
         extra = {}
         adresse_idx = headers.index("Adresse") if "Adresse" in headers else 2
         pumpetype_idx = headers.index("Pumpetype") if "Pumpetype" in headers else 3
         returskyl_idx = headers.index("Returskyl (5 min)") if "Returskyl (5 min)" in headers else 4
         nøglebokskode_idx = headers.index("Nøglebokskode") if "Nøglebokskode" in headers else 5
         he_idx = headers.index("HE telefonnummer") if "HE telefonnummer" in headers else 6
-       
+      
         if adresse_idx < len(row): extra["Adresse"] = row[adresse_idx] or "Ikke angivet"
         if pumpetype_idx < len(row): extra["Pumpetype"] = row[pumpetype_idx] or "Ikke angivet"
         if returskyl_idx < len(row) and row[returskyl_idx]:
@@ -69,7 +73,7 @@ def load_pools():
             extra["Returskyl (5 min)"] = "Ikke angivet"
         if nøglebokskode_idx < len(row): extra["Nøglebokskode"] = row[nøglebokskode_idx] or "Ikke angivet"
         if he_idx < len(row): extra["HE telefonnummer"] = row[he_idx] or "Ikke angivet"
-       
+      
         pool_info[name] = extra
    
     return pools, pool_info
@@ -143,9 +147,9 @@ with colB:
 # KLORGAS-ADVARSEL – nuanceret med stop-advarsel ved meget lav pH
 # ────────────────────────────────────────────────
 target_ph = 7.0
-target_cl_leave = 4.0  # Flyttet op her, så den er tilgængelig før advarslen
+target_cl_leave = 4.0 # Flyttet op her, så den er tilgængelig før advarslen
 
-if current_cl < target_cl_leave:  # der skal tilsættes klor
+if current_cl < target_cl_leave: # der skal tilsættes klor
     if current_ph < 6.5:
         st.error(
             "**STOP! ALVORLIG RISIKO FOR DØDELIG KLORGAS!**\n\n"
