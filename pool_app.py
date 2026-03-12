@@ -40,6 +40,10 @@ def load_pools():
         name = row[0].strip()
         if not name: continue
       
+        # Ignorer pools hvis navnet starter med bindestreg (din konvention for inaktive pools)
+        if name.startswith("-"):
+            continue
+      
         vol_idx = headers.index("Volumen (m3)") if "Volumen (m3)" in headers else 1
         vol_str = row[vol_idx] if vol_idx < len(row) else "0"
         try:
@@ -81,19 +85,12 @@ def add_pool(name, vol):
 
 st.set_page_config(page_title="Pool Dosering", layout="wide")
 
-# Logo fra sologstrand.dk – øverst til venstre, præcis som på hjemmesiden
-st.markdown(
-    """
-    <div style="position: absolute; top: 10px; left: 10px; z-index: 999;">
-        <img src="https://www.sologstrand.dk/wp-content/uploads/2023/05/sologstrand-logo.svg" 
-             alt="Sol og Strand logo" 
-             style="height: 60px; width: auto;">
-    </div>
-    """,
-    unsafe_allow_html=True
-)
-
-st.title("Pool Dosering - HTH Briquetter & Tempo Sticks")
+# Logo fra sologstrand.dk – øverst til venstre
+col_logo, col_title = st.columns([1, 5])
+with col_logo:
+    st.image("https://www.sologstrand.dk/wp-content/uploads/2023/05/sologstrand-logo.svg", width=150)
+with col_title:
+    st.title("Pool Dosering - HTH Briquetter & Tempo Sticks")
 
 # Pool valg – øverst
 st.header("Pool")
@@ -155,7 +152,7 @@ with colB:
 # KLORGAS-ADVARSEL – nuanceret med stop-advarsel ved meget lav pH
 # ────────────────────────────────────────────────
 target_ph = 7.0
-target_cl_leave = 4.0 # Flyttet op her, så den er tilgængelig før advarslen
+target_cl_leave = 4.0
 
 if current_cl < target_cl_leave: # der skal tilsættes klor
     if current_ph < 6.5:
