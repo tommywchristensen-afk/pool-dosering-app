@@ -140,8 +140,11 @@ with colB:
     current_cl = st.number_input("Nuværende frit klor (mg/l)", min_value=0.0, value=0.0, step=0.1)
 
 # ────────────────────────────────────────────────
-# KLORGAS-ADVARSEL – vises hvis pH er lav OG der skal tilsættes klor
+# KLORGAS-ADVARSEL – nuanceret med stop-advarsel ved meget lav pH
 # ────────────────────────────────────────────────
+target_ph = 7.0
+target_cl_leave = 4.0  # Flyttet op her, så den er tilgængelig før advarslen
+
 if current_cl < target_cl_leave:  # der skal tilsættes klor
     if current_ph < 6.5:
         st.error(
