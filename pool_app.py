@@ -28,21 +28,17 @@ def load_pools():
     values = sheet.get_all_values()
     if not values:
         return {}, {}
-   
+  
     headers = [h.strip() for h in values[0]] if values else []
-   
+  
     pools = {}
     pool_info = {}
-   
+  
     for row in values[1:]:
         if not row or not row[0].strip(): continue
       
         name = row[0].strip()
         if not name: continue
-      
-        # Ignorer pools hvis navnet starter med bindestreg (din konvention for inaktive pools)
-        if name.startswith("-"):
-            continue
       
         vol_idx = headers.index("Volumen (m3)") if "Volumen (m3)" in headers else 1
         vol_str = row[vol_idx] if vol_idx < len(row) else "0"
@@ -75,7 +71,7 @@ def load_pools():
         if he_idx < len(row): extra["HE telefonnummer"] = row[he_idx] or "Ikke angivet"
       
         pool_info[name] = extra
-   
+  
     return pools, pool_info
 pools, pool_info = load_pools()
 
@@ -84,6 +80,18 @@ def add_pool(name, vol):
     sheet.append_row([name, vol, "", name, "", "", ""])
 
 st.set_page_config(page_title="Pool Dosering", layout="wide")
+
+# Logo fra sologstrand.dk – øverst til venstre, præcis som på hjemmesiden
+st.markdown(
+    """
+    <div style="position: absolute; top: 10px; left: 10px; z-index: 999;">
+        <img src="https://www.sologstrand.dk/wp-content/uploads/2023/05/sologstrand-logo.svg" 
+             alt="Sol og Strand logo" 
+             style="height: 60px; width: auto;">
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
 st.title("Pool Dosering - HTH Briquetter & Tempo Sticks")
 
