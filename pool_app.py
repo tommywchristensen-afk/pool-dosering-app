@@ -85,7 +85,7 @@ def add_pool(name, vol):
 
 st.set_page_config(page_title="Pool Dosering", layout="wide")
 
-st.title("Pool Dosering - HTH Briquetter & Tempo Sticks")
+st.title("App til dosering af kemi til pools i Sol og Strand")
 
 # Pool valg – øverst
 st.header("Pool")
