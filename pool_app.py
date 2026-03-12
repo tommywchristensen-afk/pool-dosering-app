@@ -23,39 +23,55 @@ creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["gcp_service
 client = gspread.authorize(creds)
 sheet = client.open_by_key(SHEET_ID).worksheet(WORKSHEET_NAME)
 
-# Hent pools fra Sheet – med get_all_values() for at bevare ledende nuller i nøglebokskoder
+# Hent pools fra Sheet – med filtrering af inaktive rækker (Aktiv kolonne + bindestreg foran navn)
 def load_pools():
-    values = sheet.get_all_values()
+    values = sheet.get_all_values()  # Læser alt som rå tekst (bevarer ledende nuller)
     if not values:
         return {}, {}
-    
+
     headers = [h.strip() for h in values[0]] if values else []
-    
+
     pools = {}
     pool_info = {}
-    
+
+    # Find indeks for "Aktiv" kolonne (hvis den findes)
+    aktiv_idx = headers.index("Aktiv") if "Aktiv" in headers else None
+
     for row in values[1:]:
-        if not row or not row[0].strip(): continue
-        
+        if not row or not row[0].strip():
+            continue
+
         name = row[0].strip()
-        if not name: continue
-        
+        if not name:
+            continue
+
+        # Ignorer hvis navnet starter med "-" (din konvention for gennemstregede/inaktive)
+        if name.startswith("-"):
+            continue
+
+        # Ignorer hvis der er "Aktiv" kolonne og værdien er falsk/nej/tom/0
+        if aktiv_idx is not None and aktiv_idx < len(row):
+            aktiv = str(row[aktiv_idx]).strip().lower()
+            if aktiv in ["false", "nej", "", "0"]:
+                continue
+
+        # Find kolonne-indeks dynamisk
         vol_idx = headers.index("Volumen (m3)") if "Volumen (m3)" in headers else 1
         vol_str = row[vol_idx] if vol_idx < len(row) else "0"
         try:
             vol = float(vol_str)
         except (ValueError, TypeError):
             vol = 0.0
-        
+
         pools[name] = vol
-        
+
         extra = {}
         adresse_idx = headers.index("Adresse") if "Adresse" in headers else 2
         pumpetype_idx = headers.index("Pumpetype") if "Pumpetype" in headers else 3
         returskyl_idx = headers.index("Returskyl (5 min)") if "Returskyl (5 min)" in headers else 4
         nøglebokskode_idx = headers.index("Nøglebokskode") if "Nøglebokskode" in headers else 5
         he_idx = headers.index("HE telefonnummer") if "HE telefonnummer" in headers else 6
-        
+
         if adresse_idx < len(row): extra["Adresse"] = row[adresse_idx] or "Ikke angivet"
         if pumpetype_idx < len(row): extra["Pumpetype"] = row[pumpetype_idx] or "Ikke angivet"
         if returskyl_idx < len(row) and row[returskyl_idx]:
@@ -69,9 +85,9 @@ def load_pools():
             extra["Returskyl (5 min)"] = "Ikke angivet"
         if nøglebokskode_idx < len(row): extra["Nøglebokskode"] = row[nøglebokskode_idx] or "Ikke angivet"
         if he_idx < len(row): extra["HE telefonnummer"] = row[he_idx] or "Ikke angivet"
-        
+
         pool_info[name] = extra
-    
+
     return pools, pool_info
 
 pools, pool_info = load_pools()
@@ -91,6 +107,17 @@ if pool_list:
     selected = st.selectbox("Vælg pool fra listen", pool_list)
     volume = pools[selected]
     info = pool_info.get(selected, {})
+    st.caption(f"**{selected} – {volume:.1f} m³**")
+    info_lines = []
+    ordered_keys = ["Adresse", "Nøglebokskode", "HE telefonnummer", "Pumpetype", "Returskyl (5 min)"]
+    for key in ordered_keys:
+        if key in info:
+            info_lines.append(f"{key}: {info[key]}")
+    for key in info:
+        if key not in ordered_keys:
+            info_lines.append(f"{key}: {info[key]}")
+    if info_lines:
+        st.caption(" | ".join(info_lines))
 else:
     st.info("Ingen pools fundet i Google Sheet – tilføj nogle i Sheetet først")
     selected = None
@@ -116,11 +143,11 @@ with st.expander("Tilføj ny pool", expanded=False):
 if not pool_list:
     st.stop()
 
-# Stor header med pool-navn og volumen (kun her – ingen duplikat nedenfor)
 st.header(f"{selected} - {volume:.1f} m³")
 
-# Info om valgt pool – lige under headeren med navn og m³
+# Info om valgt pool – nu lige over "Husets status"
 if selected:
+    st.caption(f"**{selected} – {volume:.1f} m³**")
     info_lines = []
     ordered_keys = ["Adresse", "Nøglebokskode", "HE telefonnummer", "Pumpetype", "Returskyl (5 min)"]
     for key in ordered_keys:
