@@ -2,7 +2,7 @@
 # E-mail: tommywchristensen@gmail.com
 # Denne app og dens underliggende kode/koncept er udviklet af FairPool v/Tommy Christensen.
 # Alle rettigheder forbeholdes FairPool v/Tommy Christensen.
-# Service Teknikere ansat hos Sol og Strand har tilladelse til at bruge appen uden beregning i forbindelse med deres arbejde.
+# Service-teknikere ansat hos Sol og Strand har tilladelse til at bruge appen uden beregning i forbindelse med deres arbejde.
 # Må ikke kopieres, distribueres, modificeres, sælges eller på anden måde anvendes kommercielt eller deles offentligt
 # uden skriftlig tilladelse fra FairPool v/Tommy Christensen.
 
@@ -11,20 +11,27 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
 # ────────────────────────────────────────────────
-# Google Sheets opsætning – DIT SHEET-ID
+# Google Sheets opsætning
 # ────────────────────────────────────────────────
-SHEET_ID = "1J7hqPcK7rpRwrjaYAhKh5jDpk8tNYKhfM3_7FWCY2rA"
-WORKSHEET_NAME = "Sheet1" # Ændr til "Ark1" hvis dit ark hedder det på dansk
+POOL_SHEET_ID = "1J7hqPcK7rpRwrjaYAhKh5jDpk8tNYKhfM3_7FWCY2rA"
+POOL_WORKSHEET_NAME = "Sheet1"
+
+SPA_SHEET_ID = "16PLyJjec6WX-6Z5SQD1B_tl8qZYObKRx5Nt9ZRBHgRU"
+SPA_WORKSHEET_NAME = "Sheet1"
+
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 
-# Brug Streamlit Secrets til credentials (på cloud)
 creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["gcp_service_account"], scope)
 client = gspread.authorize(creds)
-sheet = client.open_by_key(SHEET_ID).worksheet(WORKSHEET_NAME)
 
-# Hent pools fra Sheet – med get_all_values() for at bevare ledende nuller i nøglebokskoder
+pool_sheet = client.open_by_key(POOL_SHEET_ID).worksheet(POOL_WORKSHEET_NAME)
+spa_sheet = client.open_by_key(SPA_SHEET_ID).worksheet(SPA_WORKSHEET_NAME)
+
+# ────────────────────────────────────────────────
+# Load funktioner
+# ────────────────────────────────────────────────
 def load_pools():
-    values = sheet.get_all_values()
+    values = pool_sheet.get_all_values()
     if not values:
         return {}, {}
  
@@ -37,11 +44,7 @@ def load_pools():
         if not row or not row[0].strip(): continue
      
         name = row[0].strip()
-        if not name: continue
-     
-        # Ignorer pools hvis navnet starter med bindestreg (din konvention for inaktive pools)
-        if name.startswith("-"):
-            continue
+        if not name or name.startswith("-"): continue
      
         vol_idx = headers.index("Volumen (m3)") if "Volumen (m3)" in headers else 1
         vol_str = row[vol_idx] if vol_idx < len(row) else "0"
@@ -77,9 +80,36 @@ def load_pools():
  
     return pools, pool_info
 
-# Tilføj ny pool til Sheet – rettet rækkefølge
+
+def load_spas():
+    values = spa_sheet.get_all_values()
+    if not values or len(values) < 1:
+        return []
+    
+    headers = [h.strip() for h in values[0]]
+    
+    spas = []
+    for row in values[1:]:
+        if not row or not row[0].strip():
+            continue
+            
+        spa_dict = {}
+        for i, header in enumerate(headers):
+            if i < len(row):
+                spa_dict[header] = str(row[i]).strip() if row[i] else "Ikke angivet"
+            else:
+                spa_dict[header] = "Ikke angivet"
+        
+        display_name = f"{spa_dict.get('ObjektNummer', '')} - {spa_dict.get('Adresse', '')}".strip(" -")
+        if display_name:
+            spa_dict['display_name'] = display_name
+            spas.append(spa_dict)
+    
+    return spas
+
+
 def add_pool(name, vol):
-    sheet.append_row([name, vol, "", name, "", "", ""])
+    pool_sheet.append_row([name, vol, "", name, "", "", ""])
 
 # ────────────────────────────────────────────────
 # Service Type valg ved første opstart
@@ -90,8 +120,7 @@ if "service_type" not in st.session_state:
 if st.session_state.service_type is None:
     st.set_page_config(page_title="FairPool – Vælg type", layout="centered")
     
-    # Logo
-    col_logo, col_empty = st.columns([1, 5])
+    col_logo, _ = st.columns([1, 5])
     with col_logo:
         st.image("https://iili.io/qai6KmJ.jpg", width=180)
     
@@ -110,24 +139,21 @@ if st.session_state.service_type is None:
             st.session_state.service_type = "spa"
             st.rerun()
     
-    st.stop()  # Stopper her indtil valg er foretaget
+    st.stop()
 
-# Hvis vi kommer hertil, er der valgt en type
+# ────────────────────────────────────────────────
+# Hoved-app
+# ────────────────────────────────────────────────
 service_type = st.session_state.service_type
 
-# ────────────────────────────────────────────────
-# Hoved-appen starter her
-# ────────────────────────────────────────────────
 if service_type == "pool":
-    # Alt din originale pool-kode starter her – intet er ændret
+    # ==================== POOL DEL (din originale kode) ====================
     st.set_page_config(page_title="Pool Dosering", layout="wide")
     
-    # FairPool-logo helt til venstre øverst
     col_logo, col_empty = st.columns([1, 5])
     with col_logo:
         st.image("https://iili.io/qai6KmJ.jpg", width=180)
     
-    # Pool valg – øverst (ingen overskrift imellem logo og vælger)
     pools, pool_info = load_pools()
     pool_list = list(pools.keys())
     
@@ -141,7 +167,6 @@ if service_type == "pool":
         volume = 0.0
         info = {}
     
-    # Foldbar tilføjelse af ny pool – lige under poolvælgeren
     with st.expander("Tilføj ny pool", expanded=False):
         col1, col2 = st.columns([3, 2])
         with col1:
@@ -160,10 +185,8 @@ if service_type == "pool":
     if not pool_list:
         st.stop()
     
-    # Stor header med pool-navn og volumen (kun her – ingen duplikat nedenfor)
     st.header(f"{selected} - {volume:.1f} m³")
     
-    # Info om valgt pool – lige under headeren med navn og m³
     if selected:
         info_lines = []
         ordered_keys = ["Adresse", "Nøglebokskode", "HE telefonnummer", "Pumpetype", "Returskyl (5 min)"]
@@ -184,11 +207,11 @@ if service_type == "pool":
         current_cl = st.number_input("Nuværende frit klor (mg/l)", min_value=0.0, value=0.0, step=0.1)
     
     # ────────────────────────────────────────────────
-    # KLORGAS-ADVARSEL – nuanceret med stop-advarsel ved meget lav pH
+    # KLORGAS-ADVARSEL + din originale doseringslogik
     # ────────────────────────────────────────────────
     target_ph = 7.0
     target_cl_leave = 4.0
-    if current_cl < target_cl_leave: # der skal tilsættes klor
+    if current_cl < target_cl_leave:
         if current_ph < 6.5:
             st.error(
                 "**STOP! ALVORLIG RISIKO FOR DØDELIG KLORGAS!**\n\n"
@@ -226,7 +249,6 @@ if service_type == "pool":
     
     has_existing_stick = st.checkbox("**Der ligger allerede en Tempo Stick i skimmer/klorinator**", value=False)
     
-    # Vejledning lige efter checkbox
     st.markdown(
         """
         <div style="font-size: 0.9rem; color: #666; margin-top: -8px; margin-bottom: 0.5rem;">
@@ -258,10 +280,8 @@ if service_type == "pool":
     target_cl_leave = 4.0
     target_cl_maintenance = 5.5 if leased == "Udlejet" else 3.8
     delta_ph = current_ph - target_ph
-    # Rettet opkloringslogik: Hvis klor <= 0.3 → op til 6.0 mg/l, ellers op til 4.0 mg/l
     target_klor_op = 6.0 if current_cl <= 0.3 else 4.0
     delta_cl_leave = max(0, target_klor_op - current_cl)
-    # Beregn nyt klor-niveau EFTER opkloring
     new_cl_after_leave = current_cl + delta_cl_leave
     delta_cl_maint = 0.0
     sticks_needed = 0.0
@@ -273,19 +293,16 @@ if service_type == "pool":
                 klor_per_stick_25m3 = 8.0
                 raise_here = klor_per_stick_25m3 * (25.0 / volume)
                 sticks_needed = delta_cl_maint / raise_here
-                sticks_needed = max(1, round(sticks_needed)) # Mindst 1 stick
+                sticks_needed = max(1, round(sticks_needed))
                 ph_rise_from_sticks = 0.4 * sticks_needed * (25.0 / volume)
             else:
-                sticks_needed = 1 # Mindst 1 stick selv hvis delta er 0
+                sticks_needed = 1
                 ph_rise_from_sticks = 0.4 * sticks_needed * (25.0 / volume)
         else:
             sticks_needed = 0
     
-    # Forventet pH-stigning fra Briquetter/Daytabs – fra dit Excel-ark: 0.05 per 1 mg/l klor-stigning
     ph_rise_from_briqs = delta_cl_leave * 0.05
-    # Samlet forventet pH-stigning fra klor-tilsætning
     total_ph_rise_from_klor = ph_rise_from_briqs + ph_rise_from_sticks
-    # Forventet PH efter klor-tilsætning
     expected_ph_after_klor = current_ph + total_ph_rise_from_klor
     delta_ph_eff = expected_ph_after_klor - target_ph
     
@@ -303,7 +320,6 @@ if service_type == "pool":
     
     st.header("Anbefalet dosering")
     
-    # PH-justering – reguler til 7.0 hvis PH før eller efter klor er over/under 7.0
     if current_ph > 7.0 or expected_ph_after_klor > 7.0:
         delta_to_reduce = max(current_ph - target_ph, expected_ph_after_klor - target_ph)
         ml_minus = 35 * delta_to_reduce * volume
@@ -351,19 +367,84 @@ if service_type == "pool":
     else:
         st.info("Klor efter opkloring er over 4.0 mg/l – ingen nye Tempo Sticks nødvendige til vedligehold.")
 
-else:  # service_type == "spa"
+else:  # ==================== SPA DEL ====================
     st.set_page_config(page_title="SPA Dosering", layout="wide")
     
-    col_logo, col_empty = st.columns([1, 5])
+    col_logo, _ = st.columns([1, 5])
     with col_logo:
         st.image("https://iili.io/qai6KmJ.jpg", width=180)
     
-    st.title("🛁 SPA / Boblebad")
-    st.warning("**SPA-delen er ikke tilgængelig endnu.**\n\nDenne funktionalitet er under udvikling og vil være klar snarest.")
+    st.title("🛁 SPA / Boblebad Service")
     
-    st.info("Vælg 'Swimmingpool' næste gang du starter appen, hvis du skal servicere en pool.")
+    spas = load_spas()
     
-    # Mulighed for at skifte valg
-    if st.button("← Skift til Swimmingpool"):
-        st.session_state.service_type = "pool"
+    if not spas:
+        st.error("Ingen SPA'er fundet i Google Sheet. Tjek SHEET_ID eller arket.")
+        st.stop()
+    
+    spa_options = [spa['display_name'] for spa in spas]
+    selected_spa_display = st.selectbox("Vælg SPA fra listen", spa_options)
+    
+    selected_spa = next((spa for spa in spas if spa['display_name'] == selected_spa_display), None)
+    
+    if selected_spa:
+        st.header(f"{selected_spa.get('ObjektNummer', 'SPA')} – {selected_spa.get('Adresse', '')}")
+        
+        st.subheader("Information")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric("ObjektNummer", selected_spa.get('ObjektNummer', '—'))
+        with col2:
+            st.metric("NøgleKode", selected_spa.get('NøgleKode', '—'))
+        
+        st.write(f"**Adresse:** {selected_spa.get('Adresse', 'Ikke angivet')}")
+        
+        # Status: Tomt eller Fuldt
+        status = st.radio("SPA status", ["Tomt", "Fuldt"], horizontal=True)
+        
+        # Målinger
+        colA, colB, colC = st.columns(3)
+        with colA:
+            current_ph = st.number_input("Nuværende pH", min_value=0.0, value=7.4, step=0.1)
+        with colB:
+            current_cl = st.number_input("Nuværende frit klor (mg/l)", min_value=0.0, value=2.0, step=0.1)
+        with colC:
+            current_temp = st.number_input("Temperatur (°C)", min_value=20.0, value=38.0, step=0.5)
+        
+        # Anbefalinger (baseret på standard SPA-værdier)
+        target_ph_low = 7.2
+        target_ph_high = 7.8
+        target_cl_min = 2.0 if status == "Tomt" else 3.0
+        target_cl_max = 5.0
+        
+        st.subheader("Anbefalet dosering og status")
+        
+        if current_ph < target_ph_low:
+            st.error(f"**pH for lav ({current_ph:.1f})** – Hæv med pH-plus")
+        elif current_ph > target_ph_high:
+            st.error(f"**pH for høj ({current_ph:.1f})** – Sænk med pH-minus")
+        else:
+            st.success(f"pH er god ({current_ph:.1f})")
+        
+        if current_cl < target_cl_min:
+            st.warning(f"**Klor for lav** – Tilsæt klor for at nå mindst {target_cl_min:.1f} mg/l")
+        elif current_cl > target_cl_max:
+            st.warning(f"**Klor for høj** – Vent eller brug anti-klor")
+        else:
+            st.success(f"Klor-niveau OK ({current_cl:.1f} mg/l)")
+        
+        if 36.5 <= current_temp <= 40:
+            st.success(f"Temperatur OK ({current_temp:.1f} °C)")
+        else:
+            st.info("Anbefalet spa-temperatur: 37–39 °C")
+        
+        st.caption("Mål altid efter god cirkulation og opvarmning. Brug pålidelig testmetode.")
+
+# ────────────────────────────────────────────────
+# Sidebar – skift type
+# ────────────────────────────────────────────────
+with st.sidebar:
+    if st.button("🔄 Skift mellem Pool og SPA"):
+        if "service_type" in st.session_state:
+            del st.session_state.service_type
         st.rerun()
