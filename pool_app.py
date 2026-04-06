@@ -112,7 +112,7 @@ def add_pool(name, vol):
     pool_sheet.append_row([name, vol, "", name, "", "", ""])
 
 # ────────────────────────────────────────────────
-# Service Type valg ved første opstart
+# Valg af Pool eller SPA ved første opstart
 # ────────────────────────────────────────────────
 if "service_type" not in st.session_state:
     st.session_state.service_type = None
@@ -147,7 +147,7 @@ if st.session_state.service_type is None:
 service_type = st.session_state.service_type
 
 if service_type == "pool":
-    # ==================== POOL DEL (din originale kode) ====================
+    # ==================== POOL DEL – DIN ORIGINALE KODE ====================
     st.set_page_config(page_title="Pool Dosering", layout="wide")
     
     col_logo, col_empty = st.columns([1, 5])
@@ -206,9 +206,7 @@ if service_type == "pool":
     with colB:
         current_cl = st.number_input("Nuværende frit klor (mg/l)", min_value=0.0, value=0.0, step=0.1)
     
-    # ────────────────────────────────────────────────
-    # KLORGAS-ADVARSEL + din originale doseringslogik
-    # ────────────────────────────────────────────────
+    # ── KLORGAS-ADVARSEL + doseringslogik (uændret) ──
     target_ph = 7.0
     target_cl_leave = 4.0
     if current_cl < target_cl_leave:
@@ -266,26 +264,17 @@ if service_type == "pool":
             index=0,
             help="Du skal vælge 1 eller 2 – 0 er ikke muligt når feltet er afkrydset"
         )
-        if existing_sticks is None:
-            st.markdown(
-                """
-                <div style="background-color: #ffebee; color: #b71c1c; padding: 1rem; border-radius: 6px; margin: 1rem 0; border: 1px solid #ef9a9a;">
-                <strong>Fejl:</strong> Du skal vælge 1 eller 2 eksisterende Tempo Sticks for at fortsætte.
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
     
     target_ph = 7.0
     target_cl_leave = 4.0
     target_cl_maintenance = 5.5 if leased == "Udlejet" else 3.8
-    delta_ph = current_ph - target_ph
     target_klor_op = 6.0 if current_cl <= 0.3 else 4.0
     delta_cl_leave = max(0, target_klor_op - current_cl)
     new_cl_after_leave = current_cl + delta_cl_leave
     delta_cl_maint = 0.0
     sticks_needed = 0.0
     ph_rise_from_sticks = 0.0
+    
     if not has_existing_stick and leased == "Udlejet":
         if new_cl_after_leave <= 4.0:
             delta_cl_maint = max(0, target_cl_maintenance - new_cl_after_leave)
@@ -304,7 +293,6 @@ if service_type == "pool":
     ph_rise_from_briqs = delta_cl_leave * 0.05
     total_ph_rise_from_klor = ph_rise_from_briqs + ph_rise_from_sticks
     expected_ph_after_klor = current_ph + total_ph_rise_from_klor
-    delta_ph_eff = expected_ph_after_klor - target_ph
     
     st.markdown(
         """
@@ -379,7 +367,7 @@ else:  # ==================== SPA DEL ====================
     spas = load_spas()
     
     if not spas:
-        st.error("Ingen SPA'er fundet i Google Sheet. Tjek SHEET_ID eller arket.")
+        st.error("Ingen SPA'er fundet i Google Sheet.")
         st.stop()
     
     spa_options = [spa['display_name'] for spa in spas]
@@ -390,7 +378,6 @@ else:  # ==================== SPA DEL ====================
     if selected_spa:
         st.header(f"{selected_spa.get('ObjektNummer', 'SPA')} – {selected_spa.get('Adresse', '')}")
         
-        st.subheader("Information")
         col1, col2 = st.columns(2)
         with col1:
             st.metric("ObjektNummer", selected_spa.get('ObjektNummer', '—'))
@@ -399,8 +386,12 @@ else:  # ==================== SPA DEL ====================
         
         st.write(f"**Adresse:** {selected_spa.get('Adresse', 'Ikke angivet')}")
         
-        # Status: Tomt eller Fuldt
-        status = st.radio("SPA status", ["Tomt", "Fuldt"], horizontal=True)
+        # Valg af service-type
+        service_mode = st.radio(
+            "Hvilken service skal udføres?",
+            ["Tømme", "Fylde", "Tømme + Fylde (skift af vand)"],
+            horizontal=True
+        )
         
         # Målinger
         colA, colB, colC = st.columns(3)
@@ -411,34 +402,39 @@ else:  # ==================== SPA DEL ====================
         with colC:
             current_temp = st.number_input("Temperatur (°C)", min_value=20.0, value=38.0, step=0.5)
         
-        # Anbefalinger (baseret på standard SPA-værdier)
-        target_ph_low = 7.2
-        target_ph_high = 7.8
-        target_cl_min = 2.0 if status == "Tomt" else 3.0
-        target_cl_max = 5.0
+        st.subheader("Anbefaling ved afrejse")
         
-        st.subheader("Anbefalet dosering og status")
+        target_ph = 7.0
+        target_cl = 4.0
         
-        if current_ph < target_ph_low:
-            st.error(f"**pH for lav ({current_ph:.1f})** – Hæv med pH-plus")
-        elif current_ph > target_ph_high:
-            st.error(f"**pH for høj ({current_ph:.1f})** – Sænk med pH-minus")
-        else:
-            st.success(f"pH er god ({current_ph:.1f})")
+        if service_mode == "Tømme":
+            st.success("**SPA skal tømmes** – ingen kemikalier nødvendig ved afrejse.")
+            st.info("Efter tømning: Rens filter, skaller og rør før næste fyldning.")
+            
+        elif service_mode == "Fylde":
+            st.info("**SPA skal fyldes** – juster kemikalier før afrejse")
+            st.markdown(f"**Mål ved afrejse:** pH = **{target_ph}** | Frit klor = **{target_cl} mg/l**")
+            
+            if abs(current_ph - target_ph) > 0.3:
+                st.warning(f"Juster pH til {target_ph}")
+            if abs(current_cl - target_cl) > 0.5:
+                st.warning(f"Juster klor til {target_cl} mg/l")
+            
+        else:  # Tømme + Fylde
+            st.info("**Fuld vandskift (Tømme + Fylde)**")
+            st.markdown(f"**Mål ved afrejse:** pH = **{target_ph}** | Frit klor = **{target_cl} mg/l**")
+            st.caption("Procedure: Tøm → Rens → Fyld frisk vand → Balancer pH og klor")
+            
+            if current_ph < 6.8 or current_ph > 7.8:
+                st.warning("pH bør justeres efter fyldning")
+            if current_cl < 3.0 or current_cl > 5.0:
+                st.warning("Klor bør justeres til ca. 4 mg/l ved afrejse")
         
-        if current_cl < target_cl_min:
-            st.warning(f"**Klor for lav** – Tilsæt klor for at nå mindst {target_cl_min:.1f} mg/l")
-        elif current_cl > target_cl_max:
-            st.warning(f"**Klor for høj** – Vent eller brug anti-klor")
-        else:
-            st.success(f"Klor-niveau OK ({current_cl:.1f} mg/l)")
-        
-        if 36.5 <= current_temp <= 40:
-            st.success(f"Temperatur OK ({current_temp:.1f} °C)")
+        # Temperatur-anbefaling
+        if 36.5 <= current_temp <= 40.0:
+            st.success(f"Temperatur er god ({current_temp:.1f} °C)")
         else:
             st.info("Anbefalet spa-temperatur: 37–39 °C")
-        
-        st.caption("Mål altid efter god cirkulation og opvarmning. Brug pålidelig testmetode.")
 
 # ────────────────────────────────────────────────
 # Sidebar – skift type
