@@ -386,14 +386,12 @@ else:  # ==================== SPA DEL ====================
         
         st.write(f"**Adresse:** {selected_spa.get('Adresse', 'Ikke angivet')}")
         
-        # Service type
         service_mode = st.radio(
             "Hvilken service skal udføres?",
             ["Tømme", "Fylde", "Tømme + Fylde (skift af vand)"],
             horizontal=True
         )
         
-        # Målinger
         colA, colB, colC = st.columns(3)
         with colA:
             current_ph = st.number_input("Nuværende pH", min_value=0.0, value=7.4, step=0.1)
@@ -409,7 +407,7 @@ else:  # ==================== SPA DEL ====================
         
         if service_mode == "Tømme":
             st.success("**SPA skal tømmes** – ingen kemi nødvendig ved afrejse")
-            st.info("Rens filter, skaller og rør grundigt efter tømning.")
+            st.info("Rens filter, skaller og rør grundigt.")
             
         else:  # Fylde eller Tømme + Fylde
             st.markdown(f"**Målværdier ved afrejse:** pH = **{target_ph}** | Frit klor = **{target_cl} mg/l**")
@@ -417,7 +415,7 @@ else:  # ==================== SPA DEL ====================
             # pH-justering
             delta_ph = current_ph - target_ph
             if delta_ph > 0.2:
-                ml_ph_minus = round(20 * delta_ph * 1.5)   # ca. 20 ml pr. 0.1 enhed pr. 1500L
+                ml_ph_minus = round(20 * delta_ph * 1.5)
                 st.error(f"**Brug pH-minus:** ca. **{ml_ph_minus} ml**")
             elif delta_ph < -0.2:
                 ml_ph_plus = round(25 * abs(delta_ph) * 1.5)
@@ -427,16 +425,24 @@ else:  # ==================== SPA DEL ====================
             
             # Klor-justering
             delta_cl = current_cl - target_cl
-            if delta_cl < -0.8:
-                st.error("**Tilsæt klor** ved hjælp af **Tab Twenty** eller **SunWac 9**")
-                st.caption("Start med 1–2 Tab Twenty (eller tilsvarende SunWac 9). Cirkulér og mål igen efter 30 min.")
+            
+            if delta_cl < -0.5:
+                st.error("**Hurtig opkloring (gæster samme dag):**")
+                st.markdown("**SunWac 9:** 1–2 poser")
+                st.caption("Cirkulér i 20-30 minutter og mål igen.")
+                
+                st.error("**Langtids-klor (holder ca. 7 dage):**")
+                st.markdown("**Tab Twenty:** 2–3 stk")
+                st.caption("Placer i floater eller klorinator for langsom frigivelse over 7 dage.")
+            
             elif delta_cl > 1.5:
-                st.warning("**Klor for højt** – vent eller fortynd vand hvis nødvendigt.")
+                st.warning("**Klor for højt** – vent eller fortynd hvis muligt.")
             else:
                 st.success(f"Klor-niveau er godt ({current_cl:.1f} mg/l)")
+                st.caption("Til vedligehold: Brug 2–3 Tab Twenty til ca. 7 dages klor.")
             
             if service_mode == "Tømme + Fylde":
-                st.info("**Anbefalet fuldt vandskift:** Tøm helt → Rens → Fyld frisk vand → Balancer kemi")
+                st.info("**Anbefalet fuldt vandskift:** Tøm helt → Rens → Fyld frisk vand → Balancer med SunWac 9 + Tab Twenty")
         
         # Temperatur
         if 36.5 <= current_temp <= 40.0:
@@ -445,7 +451,7 @@ else:  # ==================== SPA DEL ====================
             st.info("Anbefalet driftstemperatur: 37–39 °C")
 
 # ────────────────────────────────────────────────
-# Sidebar
+# Sidebar – skift type
 # ────────────────────────────────────────────────
 with st.sidebar:
     if st.button("🔄 Skift mellem Pool og SPA"):
