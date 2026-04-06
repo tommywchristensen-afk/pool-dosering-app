@@ -428,7 +428,7 @@ else:  # ==================== SPA DEL ====================
             
             if delta_cl < -0.5:
                 st.error("**Hurtig opkloring (gæster samme dag):**")
-                st.markdown("**SunWac 9:** 1–2 poser")
+                st.markdown("**SunWac 9 tabs (Saniklar):** 2–4 tabs")
                 st.caption("Cirkulér i 20-30 minutter og mål igen.")
                 
                 st.error("**Langtids-klor (holder ca. 7 dage):**")
@@ -442,7 +442,7 @@ else:  # ==================== SPA DEL ====================
                 st.caption("Til vedligehold: Brug 2–3 Tab Twenty til ca. 7 dages klor.")
             
             if service_mode == "Tømme + Fylde":
-                st.info("**Anbefalet fuldt vandskift:** Tøm helt → Rens → Fyld frisk vand → Balancer med SunWac 9 + Tab Twenty")
+                st.info("**Anbefalet fuldt vandskift:** Tøm helt → Rens → Fyld frisk vand → Balancer med SunWac 9 tabs + Tab Twenty")
         
         # Temperatur
         if 36.5 <= current_temp <= 40.0:
