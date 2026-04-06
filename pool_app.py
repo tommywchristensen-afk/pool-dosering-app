@@ -2,7 +2,7 @@
 # E-mail: tommywchristensen@gmail.com
 # Denne app og dens underliggende kode/koncept er udviklet af FairPool v/Tommy Christensen.
 # Alle rettigheder forbeholdes FairPool v/Tommy Christensen.
-# Service-teknikere ansat hos Sol og Strand har tilladelse til at bruge appen uden beregning i forbindelse med deres arbejde.
+# Service Teknikere ansat hos Sol og Strand har tilladelse til at bruge appen uden beregning i forbindelse med deres arbejde.
 # Må ikke kopieres, distribueres, modificeres, sælges eller på anden måde anvendes kommercielt eller deles offentligt
 # uden skriftlig tilladelse fra FairPool v/Tommy Christensen.
 
@@ -147,7 +147,7 @@ if st.session_state.service_type is None:
 service_type = st.session_state.service_type
 
 if service_type == "pool":
-    # ==================== POOL DEL – DIN ORIGINALE KODE ====================
+    # ==================== POOL DEL ====================
     st.set_page_config(page_title="Pool Dosering", layout="wide")
     
     col_logo, col_empty = st.columns([1, 5])
@@ -206,7 +206,7 @@ if service_type == "pool":
     with colB:
         current_cl = st.number_input("Nuværende frit klor (mg/l)", min_value=0.0, value=0.0, step=0.1)
     
-    # ── KLORGAS-ADVARSEL + doseringslogik (uændret) ──
+    # KLORGAS-ADVARSEL
     target_ph = 7.0
     target_cl_leave = 4.0
     if current_cl < target_cl_leave:
@@ -386,7 +386,7 @@ else:  # ==================== SPA DEL ====================
         
         st.write(f"**Adresse:** {selected_spa.get('Adresse', 'Ikke angivet')}")
         
-        # Valg af service-type
+        # Service type
         service_mode = st.radio(
             "Hvilken service skal udføres?",
             ["Tømme", "Fylde", "Tømme + Fylde (skift af vand)"],
@@ -402,42 +402,50 @@ else:  # ==================== SPA DEL ====================
         with colC:
             current_temp = st.number_input("Temperatur (°C)", min_value=20.0, value=38.0, step=0.5)
         
-        st.subheader("Anbefaling ved afrejse")
+        st.subheader("Anbefalet kemi ved afrejse")
         
         target_ph = 7.0
         target_cl = 4.0
         
         if service_mode == "Tømme":
-            st.success("**SPA skal tømmes** – ingen kemikalier nødvendig ved afrejse.")
-            st.info("Efter tømning: Rens filter, skaller og rør før næste fyldning.")
+            st.success("**SPA skal tømmes** – ingen kemi nødvendig ved afrejse")
+            st.info("Rens filter, skaller og rør grundigt efter tømning.")
             
-        elif service_mode == "Fylde":
-            st.info("**SPA skal fyldes** – juster kemikalier før afrejse")
-            st.markdown(f"**Mål ved afrejse:** pH = **{target_ph}** | Frit klor = **{target_cl} mg/l**")
+        else:  # Fylde eller Tømme + Fylde
+            st.markdown(f"**Målværdier ved afrejse:** pH = **{target_ph}** | Frit klor = **{target_cl} mg/l**")
             
-            if abs(current_ph - target_ph) > 0.3:
-                st.warning(f"Juster pH til {target_ph}")
-            if abs(current_cl - target_cl) > 0.5:
-                st.warning(f"Juster klor til {target_cl} mg/l")
+            # pH-justering
+            delta_ph = current_ph - target_ph
+            if delta_ph > 0.2:
+                ml_ph_minus = round(20 * delta_ph * 1.5)   # ca. 20 ml pr. 0.1 enhed pr. 1500L
+                st.error(f"**Brug pH-minus:** ca. **{ml_ph_minus} ml**")
+            elif delta_ph < -0.2:
+                ml_ph_plus = round(25 * abs(delta_ph) * 1.5)
+                st.error(f"**Brug pH-plus:** ca. **{ml_ph_plus} ml**")
+            else:
+                st.success("pH er inden for godt område")
             
-        else:  # Tømme + Fylde
-            st.info("**Fuld vandskift (Tømme + Fylde)**")
-            st.markdown(f"**Mål ved afrejse:** pH = **{target_ph}** | Frit klor = **{target_cl} mg/l**")
-            st.caption("Procedure: Tøm → Rens → Fyld frisk vand → Balancer pH og klor")
+            # Klor-justering
+            delta_cl = current_cl - target_cl
+            if delta_cl < -0.8:
+                st.error("**Tilsæt klor** ved hjælp af **Tab Twenty** eller **SunWac 9**")
+                st.caption("Start med 1–2 Tab Twenty (eller tilsvarende SunWac 9). Cirkulér og mål igen efter 30 min.")
+            elif delta_cl > 1.5:
+                st.warning("**Klor for højt** – vent eller fortynd vand hvis nødvendigt.")
+            else:
+                st.success(f"Klor-niveau er godt ({current_cl:.1f} mg/l)")
             
-            if current_ph < 6.8 or current_ph > 7.8:
-                st.warning("pH bør justeres efter fyldning")
-            if current_cl < 3.0 or current_cl > 5.0:
-                st.warning("Klor bør justeres til ca. 4 mg/l ved afrejse")
+            if service_mode == "Tømme + Fylde":
+                st.info("**Anbefalet fuldt vandskift:** Tøm helt → Rens → Fyld frisk vand → Balancer kemi")
         
-        # Temperatur-anbefaling
+        # Temperatur
         if 36.5 <= current_temp <= 40.0:
             st.success(f"Temperatur er god ({current_temp:.1f} °C)")
         else:
-            st.info("Anbefalet spa-temperatur: 37–39 °C")
+            st.info("Anbefalet driftstemperatur: 37–39 °C")
 
 # ────────────────────────────────────────────────
-# Sidebar – skift type
+# Sidebar
 # ────────────────────────────────────────────────
 with st.sidebar:
     if st.button("🔄 Skift mellem Pool og SPA"):
