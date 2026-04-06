@@ -14,10 +14,10 @@ from oauth2client.service_account import ServiceAccountCredentials
 # Google Sheets opsætning
 # ────────────────────────────────────────────────
 POOL_SHEET_ID = "1J7hqPcK7rpRwrjaYAhKh5jDpk8tNYKhfM3_7FWCY2rA"
-POOL_WORKSHEET_NAME = "Ark1"
+POOL_WORKSHEET_NAME = "Sheet1"
 
 SPA_SHEET_ID = "16PLyJjec6WX-6Z5SQD1B_tl8qZYObKRx5Nt9ZRBHgRU"
-SPA_WORKSHEET_NAME = "Ark1"
+SPA_WORKSHEET_NAME = "Sheet1"
 
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 
