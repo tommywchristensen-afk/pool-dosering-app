@@ -516,8 +516,6 @@ else:  # ==================== SPA DEL ====================
 
             if service_mode == "Tømme + Fylde":
                 st.info("**Anbefalet fuldt vandskift:** Tøm helt → Rens → Fyld frisk vand → Balancer kemi efter ovenstående anbefalinger.")
-
-            if service_mode == "Tømme + Fylde":
                 st.markdown(
                     """
                     <div style="background-color: #fff3cd; border-left: 6px solid #ffc107; padding: 1.2rem; margin: 1rem 0; border-radius: 6px; font-size: 1.05rem; color: #664d03;">
@@ -534,7 +532,7 @@ else:  # ==================== SPA DEL ====================
                     """,
                     unsafe_allow_html=True
                 )
-            else:
+            elif service_mode == "Fylde":
                 st.markdown(
                     """
                     <div style="background-color: #fff3cd; border-left: 6px solid #ffc107; padding: 1.2rem; margin: 1rem 0; border-radius: 6px; font-size: 1.05rem; color: #664d03;">
