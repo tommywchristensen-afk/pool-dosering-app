@@ -515,7 +515,7 @@ else:  # ==================== SPA DEL ====================
                 st.caption(f"Til vedligehold: Brug **{tab_twenty} Tab Twenty** til ca. 7 dages klor.")
 
             if service_mode == "Tømme + Fylde (skift af vand)":
-                st.info("**Anbefalet fuldt vandskift:** Tøm helt → Rens med Pipe Cleaner / Pipe Cleaner Plus → Fyld frisk vand → Balancer kemi efter ovenstående anbefalinger.")
+
                 st.markdown(
                     """
                     <div style="background-color: #e8f4fd; border-left: 6px solid #1a73e8; padding: 1.2rem; margin: 1rem 0; border-radius: 6px; font-size: 1.05rem; color: #1a1a1a;">
