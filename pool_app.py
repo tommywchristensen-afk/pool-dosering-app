@@ -491,7 +491,6 @@ else:  # ==================== SPA DEL ====================
 
                 st.error("**Hurtig opkloring (gæster samme dag):**")
                 st.markdown(f"**{sunwac_navn} (Saniklar):** {sunwac_antal} stk")
-                st.caption("Cirkulér i 20-30 minutter og mål igen.")
 
                 # Tab Twenty – 2 stk pr. 2500l
                 tab_twenty = max(2, round((spa_liter if spa_liter > 0 else 2500) / 2500) * 2)
