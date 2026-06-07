@@ -426,12 +426,6 @@ else:  # ==================== SPA DEL ====================
             if st.button("🔗 Åbn Link / Manual", type="primary"):
                 st.markdown(f'<a href="{link}" target="_blank">Åbn link i ny fane</a>', unsafe_allow_html=True)
         
-        service_mode = st.radio(
-            "Hvilken service skal udføres?",
-            ["Tømme", "Fylde", "Tømme + Fylde (skift af vand)"],
-            horizontal=True
-        )
-        
         colA, colB, colC = st.columns(3)
         with colA:
             current_ph = st.number_input("Nuværende pH", min_value=0.0, value=7.4, step=0.1)
@@ -439,6 +433,12 @@ else:  # ==================== SPA DEL ====================
             current_cl = st.number_input("Nuværende frit klor (mg/l)", min_value=0.0, value=2.0, step=0.1)
         with colC:
             current_temp = st.number_input("Temperatur (°C)", min_value=20.0, value=38.0, step=0.5)
+
+        service_mode = st.radio(
+            "Hvilken service skal udføres?",
+            ["Tømme", "Fylde", "Tømme + Fylde (skift af vand)"],
+            horizontal=True
+        )
         
         st.subheader("Anbefalet kemi ved afrejse")
         
