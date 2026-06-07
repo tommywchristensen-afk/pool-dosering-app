@@ -440,16 +440,25 @@ else:  # ==================== SPA DEL ====================
             horizontal=True
         )
         
-        st.subheader("Anbefalet kemi ved afrejse")
-        
         target_ph = 7.0
         target_cl = 4.0
-        
+
         if service_mode == "Tømme":
-            st.success("**SPA skal tømmes** – ingen kemi nødvendig ved afrejse")
-            st.info("Rens filter, skaller og rør grundigt.")
-            
+            st.markdown(
+                """
+                <div style="background-color: #fff3cd; border-left: 6px solid #ffc107; padding: 1.2rem; margin: 1rem 0; border-radius: 6px; font-size: 1.05rem; color: #664d03;">
+                <strong>⚠️ Husk ved tømning:</strong><br><br>
+                🚽 SPA vand KUN må udledes til <strong>kloak</strong>!<br><br>
+                🚰 Husk at <strong>deaktivere</strong> en evt. automatisk vandpåfyldning.<br><br>
+                🔌 Husk at <strong>slukke for SPA</strong> hvis du tømmer den, hvis ikke SPA selv gør dette.<br><br>
+                🪬 Husk at sætte <strong>termocover på igen</strong> inden du kører.
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
         else:
+            st.subheader("Anbefalet kemi ved afrejse")
             st.markdown(f"**Målværdier ved afrejse:** pH = **{target_ph}** | Frit klor = **{target_cl} mg/l**")
             
             # pH-justering
@@ -481,11 +490,11 @@ else:  # ==================== SPA DEL ====================
             
             if service_mode == "Tømme + Fylde":
                 st.info("**Anbefalet fuldt vandskift:** Tøm helt → Rens → Fyld frisk vand → Balancer med SunWac 9 tabs + Tab Twenty")
-        
-        if 36.5 <= current_temp <= 40.0:
-            st.success(f"Temperatur er god ({current_temp:.1f} °C)")
-        else:
-            st.info("Anbefalet driftstemperatur: 37–39 °C")
+
+            if 36.5 <= current_temp <= 40.0:
+                st.success(f"Temperatur er god ({current_temp:.1f} °C)")
+            else:
+                st.info("Anbefalet driftstemperatur: 37–39 °C")
 
 # ────────────────────────────────────────────────
 # Sidebar
