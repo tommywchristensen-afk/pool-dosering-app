@@ -426,15 +426,13 @@ else:  # ==================== SPA DEL ====================
             if st.button("🔗 Åbn Link / Manual", type="primary"):
                 st.markdown(f'<a href="{link}" target="_blank">Åbn link i ny fane</a>', unsafe_allow_html=True)
         
-        colA, colB, colC = st.columns(3)
+        colA, colB = st.columns(2)
         with colA:
             ph_indtastet = st.checkbox("pH målt", value=False)
             current_ph = st.number_input("Nuværende pH", min_value=0.0, value=7.0, step=0.1, disabled=not ph_indtastet)
         with colB:
             klor_indtastet = st.checkbox("Klor målt", value=False)
             current_cl = st.number_input("Nuværende frit klor (mg/l)", min_value=0.0, value=0.0, step=0.1, disabled=not klor_indtastet)
-        with colC:
-            current_temp = st.number_input("Temperatur (°C)", min_value=20.0, value=38.0, step=0.5)
 
         service_mode = st.radio(
             "Hvilken service skal udføres?",
@@ -526,7 +524,7 @@ else:  # ==================== SPA DEL ====================
                     <li>Hæld <strong>Pipe Cleaner / Pipe Cleaner Plus</strong> i SPA (en hel flaske) i det eksisterende vand.</li>
                     <li>Sprøjt <strong>Spa Clean Spray</strong> rundt i kanten, og lad det virke i et par minutter.</li>
                     <li>Tænd herefter alle JETS og sørg for at alle dysserne er åbne – tænd evt. for luft (kan undlades hvis SPA skummer for meget).</li>
-                    <li>Brug en nu kantsvamp / børste i hele vejen rundt, mens spaen kører.</li>
+                    <li>Brug en nu kantsvamp / børste i kanten hele vejen rundt, mens spaen kører.</li>
                     <li>Lad SPA køre til den selv slår JETS fra (typisk 20 minutter). Der vil genereres meget skum. Hvis skummet er ved at løbe over, luk for nogle af dysserne.</li>
                     <li>Når JETS stopper, skal SPA tømmes. Imens SPA tømmer, kan man med fordel spule kanterne med højtryksrenseren, således at alt skidt nedfældes.</li>
                     <li>Når SPA er tom, støvsuges restvand og skidt op.</li>
