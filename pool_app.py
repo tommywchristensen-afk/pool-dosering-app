@@ -398,15 +398,27 @@ else:  # ==================== SPA DEL ====================
     if selected_spa:
         st.header(selected_spa.get('Adresse', 'SPA'))
         
-        # Vis alle felter
-        col1, col2 = st.columns(2)
-        with col1:
-            st.metric("ObjektNummer", selected_spa.get('ObjektNummer', '—'))
-            st.metric("Model", selected_spa.get('Model', '—'))
-            st.metric("Liter", selected_spa.get('Liter', '—'))
-        with col2:
-            st.metric("NøgleKode", selected_spa.get('NøgleKode', '—'))
-            st.metric("Styresystem", selected_spa.get('Styresystem', '—'))
+        # Vis felter – kun hvis der er data
+        fields = [
+            ("ObjektNummer", selected_spa.get('ObjektNummer', '')),
+            ("Model",        selected_spa.get('Model', '')),
+            ("NøgleKode",    selected_spa.get('NøgleKode', '')),
+            ("Styresystem",  selected_spa.get('Styresystem', '')),
+            ("Liter",        selected_spa.get('Liter', '')),
+        ]
+        visible = [(label, val) for label, val in fields
+                   if val and val.lower() not in ("", "ikke angivet", "—")]
+
+        if visible:
+            items_html = "".join(
+                f'<span style="margin-right:1.8rem;"><span style="color:#888;font-size:0.78rem;">{label}</span>'
+                f'&nbsp;<span style="font-size:0.92rem;font-weight:600;">{val}</span></span>'
+                for label, val in visible
+            )
+            st.markdown(
+                f'<div style="margin: 0.3rem 0 1rem 0; line-height: 2;">{items_html}</div>',
+                unsafe_allow_html=True
+            )
         
         # Link knap
         link = selected_spa.get('Link', '')
