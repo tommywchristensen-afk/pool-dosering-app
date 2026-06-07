@@ -428,9 +428,11 @@ else:  # ==================== SPA DEL ====================
         
         colA, colB, colC = st.columns(3)
         with colA:
-            current_ph = st.number_input("Nuværende pH", min_value=0.0, value=7.4, step=0.1)
+            ph_indtastet = st.checkbox("pH målt", value=False)
+            current_ph = st.number_input("Nuværende pH", min_value=0.0, value=7.0, step=0.1, disabled=not ph_indtastet)
         with colB:
-            current_cl = st.number_input("Nuværende frit klor (mg/l)", min_value=0.0, value=2.0, step=0.1)
+            klor_indtastet = st.checkbox("Klor målt", value=False)
+            current_cl = st.number_input("Nuværende frit klor (mg/l)", min_value=0.0, value=0.0, step=0.1, disabled=not klor_indtastet)
         with colC:
             current_temp = st.number_input("Temperatur (°C)", min_value=20.0, value=38.0, step=0.5)
 
@@ -458,64 +460,62 @@ else:  # ==================== SPA DEL ====================
             )
 
         else:
-            st.subheader("Anbefalet kemi ved afrejse")
-            st.markdown(f"**Målværdier ved afrejse:** pH = **{target_ph}** | Frit klor = **{target_cl} mg/l**")
-
-            # Hent liter fra SPA-data
-            try:
-                spa_liter = float(selected_spa.get('Liter', '0').replace(',', '.'))
-            except (ValueError, AttributeError):
-                spa_liter = 0.0
-
-            # pH-justering
-            delta_ph = current_ph - target_ph
-            if delta_ph > 0.2:
-                # 25 ml SpaCare / 15 g Saniklar pr. 0,1 pH-sænkning pr. 1000 liter
-                liter_ref = spa_liter if spa_liter > 0 else 1000.0
-                ph_trin = delta_ph / 0.1
-                spacare_ml = round(25 * ph_trin * (liter_ref / 1000))
-                saniklar_g = round(15 * ph_trin * (liter_ref / 1000))
-                st.error(
-                    f"**Sænk pH med {delta_ph:.1f} – vælg ét produkt:**\n\n"
-                    f"💧 **SpaCare pH Down Liquid:** ca. **{spacare_ml} ml**\n\n"
-                    f"🧂 **Saniklar pH-Minus (granulat):** ca. **{saniklar_g} gram**"
-                )
-            elif delta_ph < -0.2:
-                ml_ph_plus = round(25 * abs(delta_ph) * 1.5)
-                st.error(f"**Brug pH-plus:** ca. **{ml_ph_plus} ml**")
+            if not ph_indtastet or not klor_indtastet:
+                st.info("Indtast pH og klor-måling for at se kemianbefalinger.")
             else:
-                st.success("pH er inden for godt område")
+                st.subheader("Anbefalet kemi ved afrejse")
+                st.markdown(f"**Målværdier ved afrejse:** pH = **{target_ph}** | Frit klor = **{target_cl} mg/l**")
 
-            # Klor-justering
-            delta_cl = current_cl - target_cl
-            if delta_cl < -0.5:
-                # Hurtig opkloring – SunWac 9 op til 1000l, SunWac 12 over 1000l
-                if spa_liter > 0 and spa_liter > 1000:
-                    sunwac_antal = max(1, round(spa_liter / 1000))
-                    sunwac_navn = "SunWac 12"
+                # Hent liter fra SPA-data
+                try:
+                    spa_liter = float(selected_spa.get('Liter', '0').replace(',', '.'))
+                except (ValueError, AttributeError):
+                    spa_liter = 0.0
+
+                # pH-justering
+                delta_ph = current_ph - target_ph
+                if delta_ph > 0.2:
+                    liter_ref = spa_liter if spa_liter > 0 else 1000.0
+                    ph_trin = delta_ph / 0.1
+                    spacare_ml = round(25 * ph_trin * (liter_ref / 1000))
+                    saniklar_g = round(15 * ph_trin * (liter_ref / 1000))
+                    st.error(
+                        f"**Sænk pH med {delta_ph:.1f} – vælg ét produkt:**\n\n"
+                        f"💧 **SpaCare pH Down Liquid:** ca. **{spacare_ml} ml**\n\n"
+                        f"🧂 **Saniklar pH-Minus (granulat):** ca. **{saniklar_g} gram**"
+                    )
+                elif delta_ph < -0.2:
+                    ml_ph_plus = round(25 * abs(delta_ph) * 1.5)
+                    st.error(f"**Brug pH-plus:** ca. **{ml_ph_plus} ml**")
                 else:
-                    sunwac_antal = max(1, round((spa_liter if spa_liter > 0 else 500) / 500))
-                    sunwac_navn = "SunWac 9"
+                    st.success("pH er inden for godt område")
 
-                st.error("**Hurtig opkloring (gæster samme dag):**")
-                st.markdown(f"**{sunwac_navn} (Saniklar):** {sunwac_antal} stk")
+                # Klor-justering
+                delta_cl = current_cl - target_cl
+                if delta_cl < -0.5:
+                    if spa_liter > 0 and spa_liter > 1000:
+                        sunwac_antal = max(1, round(spa_liter / 1000))
+                        sunwac_navn = "SunWac 12"
+                    else:
+                        sunwac_antal = max(1, round((spa_liter if spa_liter > 0 else 500) / 500))
+                        sunwac_navn = "SunWac 9"
 
-                # Tab Twenty – 2 stk pr. 2500l
-                tab_twenty = max(2, round((spa_liter if spa_liter > 0 else 2500) / 2500) * 2)
-                st.error("**Langtids-klor (holder ca. 7 dage):**")
-                st.markdown(f"**Tab Twenty:** {tab_twenty} stk")
-                st.caption("Placer i floater eller klorinator for langsom frigivelse over 7 dage.")
+                    st.error("**Hurtig opkloring (gæster samme dag):**")
+                    st.markdown(f"**{sunwac_navn} (Saniklar):** {sunwac_antal} stk")
 
-            elif delta_cl > 1.5:
-                st.warning("**Klor for højt** – vent eller fortynd hvis muligt.")
-            else:
-                st.success(f"Klor-niveau er godt ({current_cl:.1f} mg/l)")
-                # Tab Twenty til vedligehold
-                tab_twenty = max(2, round((spa_liter if spa_liter > 0 else 2500) / 2500) * 2)
-                st.caption(f"Til vedligehold: Brug **{tab_twenty} Tab Twenty** til ca. 7 dages klor.")
+                    tab_twenty = max(2, round((spa_liter if spa_liter > 0 else 2500) / 2500) * 2)
+                    st.error("**Langtids-klor (holder ca. 7 dage):**")
+                    st.markdown(f"**Tab Twenty:** {tab_twenty} stk")
+                    st.caption("Placer i floater eller klorinator for langsom frigivelse over 7 dage.")
+
+                elif delta_cl > 1.5:
+                    st.warning("**Klor for højt** – vent eller fortynd hvis muligt.")
+                else:
+                    st.success(f"Klor-niveau er godt ({current_cl:.1f} mg/l)")
+                    tab_twenty = max(2, round((spa_liter if spa_liter > 0 else 2500) / 2500) * 2)
+                    st.caption(f"Til vedligehold: Brug **{tab_twenty} Tab Twenty** til ca. 7 dages klor.")
 
             if service_mode == "Tømme + Fylde (skift af vand)":
-
                 st.markdown(
                     """
                     <div style="background-color: #e8f4fd; border-left: 6px solid #1a73e8; padding: 1.2rem; margin: 1rem 0; border-radius: 6px; font-size: 1.05rem; color: #1a1a1a;">
