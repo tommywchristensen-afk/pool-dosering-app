@@ -396,7 +396,7 @@ else:  # ==================== SPA DEL ====================
     selected_spa = next((spa for spa in spas if spa['display_name'] == selected_spa_display), None)
     
     if selected_spa:
-        st.header(f"{selected_spa.get('ObjektNummer', 'SPA')} – {selected_spa.get('Adresse', '')}")
+        st.header(selected_spa.get('Adresse', 'SPA'))
         
         # Vis alle felter
         col1, col2 = st.columns(2)
@@ -407,8 +407,6 @@ else:  # ==================== SPA DEL ====================
         with col2:
             st.metric("NøgleKode", selected_spa.get('NøgleKode', '—'))
             st.metric("Styresystem", selected_spa.get('Styresystem', '—'))
-        
-        st.write(f"**Adresse:** {selected_spa.get('Adresse', 'Ikke angivet')}")
         
         # Link knap
         link = selected_spa.get('Link', '')
