@@ -19,7 +19,7 @@ POOL_WORKSHEET_NAME = "Sheet1"
 SPA_SHEET_ID = "16PLyJjec6WX-6Z5SQD1B_tl8qZYObKRx5Nt9ZRBHgRU"
 SPA_WORKSHEET_NAME = "Sheet1"
 
-scope = ["[https://spreadsheets.google.com/feeds](https://spreadsheets.google.com/feeds)", "[https://www.googleapis.com/auth/drive](https://www.googleapis.com/auth/drive)"]
+scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 
 creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["gcp_service_account"], scope)
 client = gspread.authorize(creds)
@@ -122,7 +122,7 @@ if st.session_state.service_type is None:
     
     col_logo, _ = st.columns([1, 5])
     with col_logo:
-        st.image("[https://iili.io/qai6KmJ.jpg](https://iili.io/qai6KmJ.jpg)", width=180)
+        st.image("https://iili.io/qai6KmJ.jpg", width=180)
     
     st.title("Velkommen til FairPool")
     st.subheader("Hvad skal du servicere i dag?")
@@ -152,7 +152,7 @@ if service_type == "pool":
     
     col_logo, col_empty = st.columns([1, 5])
     with col_logo:
-        st.image("[https://iili.io/qai6KmJ.jpg](https://iili.io/qai6KmJ.jpg)", width=180)
+        st.image("https://iili.io/qai6KmJ.jpg", width=180)
     
     pools, pool_info = load_pools()
     pool_list = list(pools.keys())
@@ -214,11 +214,11 @@ if service_type == "pool":
             st.error(
                 "**STOP! ALVORLIG RISIKO FOR DØDELIG KLORGAS!**\n\n"
                 "pH er under 6.5 og du skal tilsætte klor → der kan dannes **giftig klorgas (Cl₂)** øjeblikkeligt!\n"
-                "Klorgas is farlig og kan være **dødelig** selv i små mængder.\n\n"
-                "**GØR IKKE noget med klor før pH er hævet!**\n"
+                "Klorgas er farlig og kan være **dødelig** selv i små mængder.\n\n"
+                "**GØR IKKE noget med klor før pH is hævet!**\n"
                 "- Hæv pH til mindst 7.0–7.2 med pH-plus **FØR** du overvejer klor.\n"
                 "- Mål pH igen efter hævning – fortsæt kun hvis pH er over 6.8.\n"
-                "- Arbejd i godt ventileret område, brug åndedrætszærn hvis nødvendigt.\n"
+                "- Arbejd i godt ventileret område, brug åndedrætsværn hvis nødvendigt.\n"
                 "- Ved tvivl: kontakt fagperson eller giftlinjen."
             )
         elif current_ph < 7.0:
@@ -267,4 +267,54 @@ if service_type == "pool":
     
     target_ph = 7.0
     target_cl_leave = 4.0
-    target_cl_maintenance = 5.5 if
+    target_cl_maintenance = 5.5 if leased == "Udlejet" else 3.8
+    target_klor_op = 6.0 if current_cl <= 0.3 else 4.0
+    delta_cl_leave = max(0, target_klor_op - current_cl)
+    new_cl_after_leave = current_cl + delta_cl_leave
+    delta_cl_maint = 0.0
+    sticks_needed = 0.0
+    ph_rise_from_sticks = 0.0
+    
+    if not has_existing_stick and leased == "Udlejet":
+        if new_cl_after_leave <= 4.0:
+            delta_cl_maint = max(0, target_cl_maintenance - new_cl_after_leave)
+            if delta_cl_maint > 0:
+                klor_per_stick_25m3 = 8.0
+                raise_here = klor_per_stick_25m3 * (25.0 / volume)
+                sticks_needed = delta_cl_maint / raise_here
+                sticks_needed = max(1, round(sticks_needed))
+                ph_rise_from_sticks = 0.4 * sticks_needed * (25.0 / volume)
+            else:
+                sticks_needed = 1
+                ph_rise_from_sticks = 0.4 * sticks_needed * (25.0 / volume)
+        else:
+            sticks_needed = 0
+    
+    ph_rise_from_briqs = delta_cl_leave * 0.05
+    total_ph_rise_from_klor = ph_rise_from_briqs + ph_rise_from_sticks
+    expected_ph_after_klor = current_ph + total_ph_rise_from_klor
+    
+    st.markdown(
+        """
+        <div style="font-size: 1.15rem; color: #664d03; background-color: #fff3cd; border-left: 6px solid #ffc107; padding: 1.2rem; margin: 1rem 0; border-radius: 6px;">
+        <strong>GØR DETTE FØRST - trin for trin</strong><br><br>
+        1. Juster pH først (opløs Saniklar PH Minus i en spand med poolvand og tilsæt blandingen langsomt, gerne ud for dyserne)<br>
+        2. Tilsæt HTH Briquetter/Daytabs hvis nødvendigt for at nå ~4 mg/l ved afgang fra poolhus.<br>
+        3. Tilsæt Tempo Sticks i KLORINATOREN eller i SKIMMERKURVEN via en Tempo Stick Dispenser (kun hvis der ingen Tempo Sticks er i forvejen og huset er udlejet)
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+    
+    st.header("Anbefalet dosering")
+    
+    if current_ph > 7.0 or expected_ph_after_klor > 7.0:
+        delta_to_reduce = max(current_ph - target_ph, expected_ph_after_klor - target_ph)
+        ml_minus = 35 * delta_to_reduce * volume
+        st.subheader(f"Sænk pH med {delta_to_reduce:.2f} (efter klor)")
+        st.markdown(f"**pH-minus → {ml_minus:.0f} ml**")
+    elif current_ph < 7.0 and expected_ph_after_klor < 7.0:
+        delta_to_raise = target_ph - expected_ph_after_klor
+        ml_plus = 49 * delta_to_raise * volume
+        st.subheader(f"Hæv pH med {delta_to_raise:.2f} (efter klor)")
+        st.markdown(f"**pH
