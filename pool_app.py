@@ -491,6 +491,18 @@ else:  # ==================== SPA DEL ====================
             if service_mode == "Tømme + Fylde":
                 st.info("**Anbefalet fuldt vandskift:** Tøm helt → Rens → Fyld frisk vand → Balancer med SunWac 9 tabs + Tab Twenty")
 
+            st.markdown(
+                """
+                <div style="background-color: #fff3cd; border-left: 6px solid #ffc107; padding: 1.2rem; margin: 1rem 0; border-radius: 6px; font-size: 1.05rem; color: #664d03;">
+                <strong>⚠️ Husk ved fyldning:</strong><br><br>
+                🔄 Husk ikke at fylde før du har isat <strong>RENE eller NYE filtre</strong>.<br><br>
+                🚰 Husk at kontrollere om <strong>afløb er lukket</strong>.<br><br>
+                ⚙️ Husk at kontrollere at <strong>SPA er korrekt indstillet</strong>.
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
             if 36.5 <= current_temp <= 40.0:
                 st.success(f"Temperatur er god ({current_temp:.1f} °C)")
             else:
