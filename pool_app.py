@@ -517,17 +517,35 @@ else:  # ==================== SPA DEL ====================
             if service_mode == "Tømme + Fylde":
                 st.info("**Anbefalet fuldt vandskift:** Tøm helt → Rens → Fyld frisk vand → Balancer kemi efter ovenstående anbefalinger.")
 
-            st.markdown(
-                """
-                <div style="background-color: #fff3cd; border-left: 6px solid #ffc107; padding: 1.2rem; margin: 1rem 0; border-radius: 6px; font-size: 1.05rem; color: #664d03;">
-                <strong>⚠️ Husk ved fyldning:</strong><br><br>
-                🔄 Husk ikke at fylde før du har isat <strong>RENE eller NYE filtre</strong>.<br><br>
-                🚰 Husk at kontrollere om <strong>afløb er lukket</strong>.<br><br>
-                ⚙️ Husk at kontrollere at <strong>SPA er korrekt indstillet</strong>.
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
+            if service_mode == "Tømme + Fylde":
+                st.markdown(
+                    """
+                    <div style="background-color: #fff3cd; border-left: 6px solid #ffc107; padding: 1.2rem; margin: 1rem 0; border-radius: 6px; font-size: 1.05rem; color: #664d03;">
+                    <strong>⚠️ Husk ved tømning:</strong><br><br>
+                    🚽 SPA vand KUN må udledes til <strong>kloak</strong>!<br><br>
+                    🚰 Husk at <strong>deaktivere</strong> en evt. automatisk vandpåfyldning.<br><br>
+                    🔌 Husk at <strong>slukke for SPA</strong> hvis du tømmer den, hvis ikke SPA selv gør dette.<br><br>
+                    🪬 Husk at sætte <strong>termocover på igen</strong> inden du kører.<br><br>
+                    <strong>⚠️ Husk ved fyldning:</strong><br><br>
+                    🔄 Husk ikke at fylde før du har isat <strong>RENE eller NYE filtre</strong>.<br><br>
+                    🚰 Husk at kontrollere om <strong>afløb er lukket</strong>.<br><br>
+                    ⚙️ Husk at kontrollere at <strong>SPA er korrekt indstillet</strong>.
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+            else:
+                st.markdown(
+                    """
+                    <div style="background-color: #fff3cd; border-left: 6px solid #ffc107; padding: 1.2rem; margin: 1rem 0; border-radius: 6px; font-size: 1.05rem; color: #664d03;">
+                    <strong>⚠️ Husk ved fyldning:</strong><br><br>
+                    🔄 Husk ikke at fylde før du har isat <strong>RENE eller NYE filtre</strong>.<br><br>
+                    🚰 Husk at kontrollere om <strong>afløb er lukket</strong>.<br><br>
+                    ⚙️ Husk at kontrollere at <strong>SPA er korrekt indstillet</strong>.
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
 
 # ────────────────────────────────────────────────
 # Sidebar
