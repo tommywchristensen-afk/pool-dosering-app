@@ -426,15 +426,22 @@ else:  # ==================== SPA DEL ====================
             if st.button("🔗 Åbn Link / Manual", type="primary"):
                 st.markdown(f'<a href="{link}" target="_blank">Åbn link i ny fane</a>', unsafe_allow_html=True)
 
-        # Billede
+        # Billede(r)
         billede = selected_spa.get('Billede', '')
         if billede and billede.lower() not in ("", "ikke angivet", "—"):
-            st.markdown(
-                f'<a href="{billede}" target="_blank">'
-                f'<img src="{billede}" style="height:160px; width:auto; border-radius:8px; '
-                f'border:1px solid #ddd; cursor:pointer; margin: 0.5rem 0 1rem 0;" '
+            # Split på komma eller linjeskift og rens whitespace
+            import re
+            billede_links = [b.strip() for b in re.split(r'[,\n]+', billede) if b.strip()]
+            thumbs_html = "".join(
+                f'<a href="{b}" target="_blank">'
+                f'<img src="{b}" style="height:160px; width:auto; border-radius:8px; '
+                f'border:1px solid #ddd; cursor:pointer; margin: 0.5rem 0.5rem 1rem 0;" '
                 f'title="Klik for fuld størrelse"/>'
-                f'</a>',
+                f'</a>'
+                for b in billede_links
+            )
+            st.markdown(
+                f'<div style="display:flex; flex-wrap:wrap; gap:0.5rem; margin: 0.5rem 0 1rem 0;">{thumbs_html}</div>',
                 unsafe_allow_html=True
             )
         
