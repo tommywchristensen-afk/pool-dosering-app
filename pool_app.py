@@ -514,7 +514,7 @@ else:  # ==================== SPA DEL ====================
                 tab_twenty = max(2, round((spa_liter if spa_liter > 0 else 2500) / 2500) * 2)
                 st.caption(f"Til vedligehold: Brug **{tab_twenty} Tab Twenty** til ca. 7 dages klor.")
 
-            if service_mode == "Tømme + Fylde":
+            if service_mode == "Tømme + Fylde (skift af vand)":
                 st.info("**Anbefalet fuldt vandskift:** Tøm helt → Rens → Fyld frisk vand → Balancer kemi efter ovenstående anbefalinger.")
                 st.markdown(
                     """
