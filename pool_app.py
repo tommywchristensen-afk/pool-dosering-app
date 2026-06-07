@@ -518,6 +518,30 @@ else:  # ==================== SPA DEL ====================
                 st.info("**Anbefalet fuldt vandskift:** Tøm helt → Rens → Fyld frisk vand → Balancer kemi efter ovenstående anbefalinger.")
                 st.markdown(
                     """
+                    <div style="background-color: #e8f4fd; border-left: 6px solid #1a73e8; padding: 1.2rem; margin: 1rem 0; border-radius: 6px; font-size: 1.05rem; color: #1a1a1a;">
+                    <strong>🧼 Fremgangsmåde – Pipe Cleaner / Pipe Cleaner Plus</strong><br>
+                    <em>(Plus anvendes til SPA over 1000 liter)</em><br><br>
+                    <ol style="margin: 0; padding-left: 1.2rem; line-height: 2;">
+                    <li>Fjern først filtre <strong>(vigtigt!)</strong></li>
+                    <li>Hæld <strong>Pipe Cleaner / Pipe Cleaner Plus</strong> i SPA (en hel flaske) i det eksisterende vand.</li>
+                    <li>Sprøjt <strong>Spa Clean Spray</strong> rundt i kanten, og lad det virke i et par minutter.</li>
+                    <li>Tænd herefter alle JETS og sørg for at alle dysserne er åbne – tænd evt. for luft (kan undlades hvis SPA skummer for meget).</li>
+                    <li>Brug en nu kantsvamp / børste i hele vejen rundt, mens spaen kører.</li>
+                    <li>Lad SPA køre til den selv slår JETS fra (typisk 20 minutter). Der vil genereres meget skum. Hvis skummet er ved at løbe over, luk for nogle af dysserne.</li>
+                    <li>Når JETS stopper, skal SPA tømmes. Imens SPA tømmer, kan man med fordel spule kanterne med højtryksrenseren, således at alt skidt nedfældes.</li>
+                    <li>Når SPA er tom, støvsuges restvand og skidt op.</li>
+                    <li>SPA fyldes igen.</li>
+                    <li>Når SPA er fuld, køres JETS igen indtil de stopper. Dette skyller systemet igennem.</li>
+                    <li>Når JETS stopper, tømmes SPA og denne støvsuges og tørres efter med klud.</li>
+                    <li>Isæt nye / rene filtre.</li>
+                    </ol><br>
+                    <strong>Spaen er nu klar til at blive fyldt, så den er klar til de nye gæster!</strong>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+                st.markdown(
+                    """
                     <div style="background-color: #fff3cd; border-left: 6px solid #ffc107; padding: 1.2rem; margin: 1rem 0; border-radius: 6px; font-size: 1.05rem; color: #664d03;">
                     <strong>⚠️ Husk ved tømning:</strong><br><br>
                     🚽 SPA vand KUN må udledes til <strong>kloak</strong>!<br><br>
