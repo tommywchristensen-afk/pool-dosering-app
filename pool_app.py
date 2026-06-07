@@ -470,8 +470,16 @@ else:  # ==================== SPA DEL ====================
             # pH-justering
             delta_ph = current_ph - target_ph
             if delta_ph > 0.2:
-                ml_ph_minus = round(20 * delta_ph * 1.5)
-                st.error(f"**Brug pH-minus:** ca. **{ml_ph_minus} ml**")
+                # 25 ml SpaCare / 15 g Saniklar pr. 0,1 pH-sænkning pr. 1000 liter
+                liter_ref = spa_liter if spa_liter > 0 else 1000.0
+                ph_trin = delta_ph / 0.1
+                spacare_ml = round(25 * ph_trin * (liter_ref / 1000))
+                saniklar_g = round(15 * ph_trin * (liter_ref / 1000))
+                st.error(
+                    f"**Sænk pH med {delta_ph:.1f} – vælg ét produkt:**\n\n"
+                    f"💧 **SpaCare pH Down Liquid:** ca. **{spacare_ml} ml**\n\n"
+                    f"🧂 **Saniklar pH-Minus (granulat):** ca. **{saniklar_g} gram**"
+                )
             elif delta_ph < -0.2:
                 ml_ph_plus = round(25 * abs(delta_ph) * 1.5)
                 st.error(f"**Brug pH-plus:** ca. **{ml_ph_plus} ml**")
