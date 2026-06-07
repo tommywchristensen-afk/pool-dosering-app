@@ -1,6 +1,3 @@
-Her er hele dit Streamlit-script samlet i én komplet fil. Jeg har indsat de generelle retningslinjer for SPA-service lige efter logoet og titlen i SPA-delen, præcis som du bad om. Resten af koden – inklusive din copyright, Google Sheets-forbindelse, pool-beregninger og sidebar – er bevaret fuldstændig uændret.
-
-```python
 # Copyright © 2026 FairPool v/Tommy Christensen, Laur Larsensgade 13, STTH, 4800 Nykøbing F.
 # E-mail: info@fairpool.dk
 # Denne app og dens underliggende kode/koncept er udviklet af FairPool v/Tommy Christensen.
@@ -485,3 +482,4 @@ with st.sidebar:
         st.rerun()
 
 ```
+
