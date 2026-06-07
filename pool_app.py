@@ -460,7 +460,13 @@ else:  # ==================== SPA DEL ====================
         else:
             st.subheader("Anbefalet kemi ved afrejse")
             st.markdown(f"**Målværdier ved afrejse:** pH = **{target_ph}** | Frit klor = **{target_cl} mg/l**")
-            
+
+            # Hent liter fra SPA-data
+            try:
+                spa_liter = float(selected_spa.get('Liter', '0').replace(',', '.'))
+            except (ValueError, AttributeError):
+                spa_liter = 0.0
+
             # pH-justering
             delta_ph = current_ph - target_ph
             if delta_ph > 0.2:
@@ -471,25 +477,38 @@ else:  # ==================== SPA DEL ====================
                 st.error(f"**Brug pH-plus:** ca. **{ml_ph_plus} ml**")
             else:
                 st.success("pH er inden for godt område")
-            
+
             # Klor-justering
             delta_cl = current_cl - target_cl
             if delta_cl < -0.5:
+                # Hurtig opkloring – SunWac 9 op til 1000l, SunWac 12 over 1000l
+                if spa_liter > 0 and spa_liter > 1000:
+                    sunwac_antal = max(1, round(spa_liter / 1000))
+                    sunwac_navn = "SunWac 12"
+                else:
+                    sunwac_antal = max(1, round((spa_liter if spa_liter > 0 else 500) / 500))
+                    sunwac_navn = "SunWac 9"
+
                 st.error("**Hurtig opkloring (gæster samme dag):**")
-                st.markdown("**SunWac 9 tabs (Saniklar):** 2–4 tabs")
+                st.markdown(f"**{sunwac_navn} (Saniklar):** {sunwac_antal} stk")
                 st.caption("Cirkulér i 20-30 minutter og mål igen.")
-                
+
+                # Tab Twenty – 2 stk pr. 2500l
+                tab_twenty = max(2, round((spa_liter if spa_liter > 0 else 2500) / 2500) * 2)
                 st.error("**Langtids-klor (holder ca. 7 dage):**")
-                st.markdown("**Tab Twenty:** 2–3 stk")
+                st.markdown(f"**Tab Twenty:** {tab_twenty} stk")
                 st.caption("Placer i floater eller klorinator for langsom frigivelse over 7 dage.")
+
             elif delta_cl > 1.5:
                 st.warning("**Klor for højt** – vent eller fortynd hvis muligt.")
             else:
                 st.success(f"Klor-niveau er godt ({current_cl:.1f} mg/l)")
-                st.caption("Til vedligehold: Brug 2–3 Tab Twenty til ca. 7 dages klor.")
-            
+                # Tab Twenty til vedligehold
+                tab_twenty = max(2, round((spa_liter if spa_liter > 0 else 2500) / 2500) * 2)
+                st.caption(f"Til vedligehold: Brug **{tab_twenty} Tab Twenty** til ca. 7 dages klor.")
+
             if service_mode == "Tømme + Fylde":
-                st.info("**Anbefalet fuldt vandskift:** Tøm helt → Rens → Fyld frisk vand → Balancer med SunWac 9 tabs + Tab Twenty")
+                st.info("**Anbefalet fuldt vandskift:** Tøm helt → Rens → Fyld frisk vand → Balancer kemi efter ovenstående anbefalinger.")
 
             st.markdown(
                 """
@@ -502,11 +521,6 @@ else:  # ==================== SPA DEL ====================
                 """,
                 unsafe_allow_html=True
             )
-
-            if 36.5 <= current_temp <= 40.0:
-                st.success(f"Temperatur er god ({current_temp:.1f} °C)")
-            else:
-                st.info("Anbefalet driftstemperatur: 37–39 °C")
 
 # ────────────────────────────────────────────────
 # Sidebar
