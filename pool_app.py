@@ -21,17 +21,25 @@ SPA_WORKSHEET_NAME = "Sheet1"
 
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 
-creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["gcp_service_account"], scope)
-client = gspread.authorize(creds)
+@st.cache_resource
+def get_sheets_client():
+    creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["gcp_service_account"], scope)
+    return gspread.authorize(creds)
 
-pool_sheet = client.open_by_key(POOL_SHEET_ID).worksheet(POOL_WORKSHEET_NAME)
-spa_sheet = client.open_by_key(SPA_SHEET_ID).worksheet(SPA_WORKSHEET_NAME)
+@st.cache_resource
+def get_pool_sheet():
+    return get_sheets_client().open_by_key(POOL_SHEET_ID).worksheet(POOL_WORKSHEET_NAME)
+
+@st.cache_resource
+def get_spa_sheet():
+    return get_sheets_client().open_by_key(SPA_SHEET_ID).worksheet(SPA_WORKSHEET_NAME)
 
 # ────────────────────────────────────────────────
 # Load funktioner
 # ────────────────────────────────────────────────
+@st.cache_data(ttl=300)
 def load_pools():
-    values = pool_sheet.get_all_values()
+    values = get_pool_sheet().get_all_values()
     if not values:
         return {}, {}
  
@@ -81,8 +89,9 @@ def load_pools():
     return pools, pool_info
 
 
+@st.cache_data(ttl=300)
 def load_spas():
-    values = spa_sheet.get_all_values()
+    values = get_spa_sheet().get_all_values()
     if not values or len(values) < 1:
         return []
     
@@ -109,7 +118,7 @@ def load_spas():
 
 
 def add_pool(name, vol):
-    pool_sheet.append_row([name, vol, "", name, "", "", ""])
+    get_pool_sheet().append_row([name, vol, "", name, "", "", ""])
 
 # ────────────────────────────────────────────────
 # Valg af Pool eller SPA ved første opstart
