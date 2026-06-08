@@ -420,11 +420,12 @@ else:  # ==================== SPA DEL ====================
                 unsafe_allow_html=True
             )
 
-        # Fyldning og Tømning
+        # Fyldning, Fyldetid og Tømning
         fyldning = selected_spa.get('Fyldning', '')
+        fyldetid = selected_spa.get('Fyldetid', '')
         tomning = selected_spa.get('Tømning', '')
 
-        info_cols = st.columns(2)
+        info_cols = st.columns(3)
 
         with info_cols[0]:
             if fyldning and fyldning.lower() not in ("", "ikke angivet", "—"):
@@ -437,6 +438,16 @@ else:  # ==================== SPA DEL ====================
                 )
 
         with info_cols[1]:
+            if fyldetid and fyldetid.lower() not in ("", "ikke angivet", "—"):
+                st.markdown(
+                    f'<div style="background:#f0f7ff; border-radius:8px; padding:0.7rem 1rem; margin-bottom:0.8rem;">'
+                    f'<div style="color:#888; font-size:0.75rem;">Fyldetid</div>'
+                    f'<div style="font-size:0.95rem; font-weight:600;">⏱ {fyldetid}</div>'
+                    f'</div>',
+                    unsafe_allow_html=True
+                )
+
+        with info_cols[2]:
             if tomning and tomning.lower() not in ("", "ikke angivet", "—"):
                 tomning_lower = tomning.lower()
                 if "automatisk" in tomning_lower:
