@@ -420,17 +420,50 @@ else:  # ==================== SPA DEL ====================
                 unsafe_allow_html=True
             )
 
-        # Tømme / fyldetid
-        tomme_fylde_tid = selected_spa.get('Tømme / fyldetid', '')
-        if tomme_fylde_tid and tomme_fylde_tid.lower() not in ("", "ikke angivet", "—"):
-            st.markdown(
-                f'<div style="margin: 0.2rem 0 1rem 0;">'
-                f'<span style="color:#888;font-size:0.78rem;">Tømme / fyldetid</span>&nbsp;'
-                f'<span style="font-size:0.92rem;font-weight:600;">⏱ {tomme_fylde_tid}</span>'
-                f'</div>',
-                unsafe_allow_html=True
-            )
-        
+        # Fyldning og Tømning
+        fyldning = selected_spa.get('Fyldning', '')
+        tomning = selected_spa.get('Tømning', '')
+
+        info_cols = st.columns(2)
+
+        with info_cols[0]:
+            if fyldning and fyldning.lower() not in ("", "ikke angivet", "—"):
+                st.markdown(
+                    f'<div style="background:#f0f7ff; border-radius:8px; padding:0.7rem 1rem; margin-bottom:0.8rem;">'
+                    f'<div style="color:#888; font-size:0.75rem;">Fyldning</div>'
+                    f'<div style="font-size:0.95rem; font-weight:600;">💧 {fyldning}</div>'
+                    f'</div>',
+                    unsafe_allow_html=True
+                )
+
+        with info_cols[1]:
+            if tomning and tomning.lower() not in ("", "ikke angivet", "—"):
+                tomning_lower = tomning.lower()
+                if "automatisk" in tomning_lower:
+                    ikon = "🤖"
+                    farve = "#f0fff4"
+                elif "kuglehane" in tomning_lower or "semi" in tomning_lower:
+                    ikon = "🔧"
+                    farve = "#fff8f0"
+                elif "dykpumpe" in tomning_lower or "manuel" in tomning_lower:
+                    ikon = "🪣"
+                    farve = "#fff0f0"
+                elif "ikke" in tomning_lower or "tømmes ikke" in tomning_lower:
+                    ikon = "🚫"
+                    farve = "#f5f5f5"
+                else:
+                    ikon = "🔽"
+                    farve = "#f9f9f9"
+
+                st.markdown(
+                    f'<div style="background:{farve}; border-radius:8px; padding:0.7rem 1rem; margin-bottom:0.8rem;">'
+                    f'<div style="color:#888; font-size:0.75rem;">Tømning</div>'
+                    f'<div style="font-size:0.95rem; font-weight:600;">{ikon} {tomning}</div>'
+                    f'</div>',
+                    unsafe_allow_html=True
+                )
+
+
         # Link knap
         link = selected_spa.get('Link', '')
         if link and link.lower() != "ikke angivet" and link.strip():
