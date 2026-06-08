@@ -120,6 +120,19 @@ def load_spas():
 def add_pool(name, vol):
     get_pool_sheet().append_row([name, vol, "", name, "", "", ""])
 
+def force_light_mode():
+    st.markdown(
+        """<style>
+        :root { color-scheme: light only; }
+        html, body, [data-testid="stAppViewContainer"], [data-testid="stApp"] {
+            color-scheme: light only !important;
+            background-color: #ffffff !important;
+            color: #000000 !important;
+        }
+        </style>""",
+        unsafe_allow_html=True
+    )
+
 # ────────────────────────────────────────────────
 # Valg af Pool eller SPA ved første opstart
 # ────────────────────────────────────────────────
@@ -128,6 +141,7 @@ if "service_type" not in st.session_state:
 
 if st.session_state.service_type is None:
     st.set_page_config(page_title="FairPool – Vælg type", layout="centered")
+    force_light_mode()
     
     col_logo, _ = st.columns([1, 5])
     with col_logo:
@@ -158,6 +172,7 @@ service_type = st.session_state.service_type
 if service_type == "pool":
     # ==================== POOL DEL ====================
     st.set_page_config(page_title="Pool Dosering", layout="wide")
+    force_light_mode()
     
     col_logo, col_empty = st.columns([1, 5])
     with col_logo:
@@ -366,6 +381,7 @@ if service_type == "pool":
 
 else:  # ==================== SPA DEL ====================
     st.set_page_config(page_title="SPA Dosering", layout="wide")
+    force_light_mode()
     
     col_logo, _ = st.columns([1, 5])
     with col_logo:
