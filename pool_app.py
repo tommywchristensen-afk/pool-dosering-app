@@ -416,7 +416,18 @@ else:  # ==================== SPA DEL ====================
                 for label, val in visible
             )
             st.markdown(
-                f'<div style="margin: 0.3rem 0 1rem 0; line-height: 2;">{items_html}</div>',
+                f'<div style="margin: 0.3rem 0 0.5rem 0; line-height: 2;">{items_html}</div>',
+                unsafe_allow_html=True
+            )
+
+        # Tømme / fyldetid
+        tomme_fylde_tid = selected_spa.get('Tømme / fyldetid', '')
+        if tomme_fylde_tid and tomme_fylde_tid.lower() not in ("", "ikke angivet", "—"):
+            st.markdown(
+                f'<div style="margin: 0.2rem 0 1rem 0;">'
+                f'<span style="color:#888;font-size:0.78rem;">Tømme / fyldetid</span>&nbsp;'
+                f'<span style="font-size:0.92rem;font-weight:600;">⏱ {tomme_fylde_tid}</span>'
+                f'</div>',
                 unsafe_allow_html=True
             )
         
