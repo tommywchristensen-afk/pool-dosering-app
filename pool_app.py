@@ -420,16 +420,17 @@ else:  # ==================== SPA DEL ====================
                 unsafe_allow_html=True
             )
 
-        # Fyldning, Fyldetid og Tømning
+        # Fyldning, Fyldes, Fyldetid og Tømning
         fyldning = selected_spa.get('Fyldning', '')
+        fyldes   = selected_spa.get('Fyldes', '')
         fyldetid = selected_spa.get('Fyldetid', '')
-        tomning = selected_spa.get('Tømning', '')
+        tomning  = selected_spa.get('Tømning', '')
 
-        info_cols = st.columns(3)
+        import re as _re
+        info_cols = st.columns(4)
 
         with info_cols[0]:
             if fyldning and fyldning.lower() not in ("", "ikke angivet", "—"):
-                import re as _re
                 fyldning_ren = _re.sub(r'\s*(min\.?|minutter)\s*$', '', fyldning.strip(), flags=_re.IGNORECASE)
                 st.markdown(
                     f'<div style="background:#f0f7ff; border-radius:8px; padding:0.7rem 1rem; margin-bottom:0.8rem;">'
@@ -440,8 +441,30 @@ else:  # ==================== SPA DEL ====================
                 )
 
         with info_cols[1]:
+            if fyldes and fyldes.lower() not in ("", "ikke angivet", "—"):
+                fyldes_lower = fyldes.lower()
+                if "automatisk" in fyldes_lower:
+                    fyldes_ikon = "🤖"
+                    fyldes_farve = "#f0fff4"
+                elif "kuglehane" in fyldes_lower or "semi" in fyldes_lower:
+                    fyldes_ikon = "🔧"
+                    fyldes_farve = "#fff8f0"
+                elif "vandslange" in fyldes_lower:
+                    fyldes_ikon = "🪣"
+                    fyldes_farve = "#f0f7ff"
+                else:
+                    fyldes_ikon = "💧"
+                    fyldes_farve = "#f0f7ff"
+                st.markdown(
+                    f'<div style="background:{fyldes_farve}; border-radius:8px; padding:0.7rem 1rem; margin-bottom:0.8rem;">'
+                    f'<div style="color:#888; font-size:0.75rem;">Fyldes</div>'
+                    f'<div style="font-size:0.95rem; font-weight:600;">{fyldes_ikon} {fyldes}</div>'
+                    f'</div>',
+                    unsafe_allow_html=True
+                )
+
+        with info_cols[2]:
             if fyldetid and fyldetid.lower() not in ("", "ikke angivet", "—"):
-                import re as _re
                 fyldetid_ren = _re.sub(r'\s*(min\.?|minutter)\s*$', '', fyldetid.strip(), flags=_re.IGNORECASE)
                 st.markdown(
                     f'<div style="background:#f0f7ff; border-radius:8px; padding:0.7rem 1rem; margin-bottom:0.8rem;">'
@@ -451,7 +474,7 @@ else:  # ==================== SPA DEL ====================
                     unsafe_allow_html=True
                 )
 
-        with info_cols[2]:
+        with info_cols[3]:
             if tomning and tomning.lower() not in ("", "ikke angivet", "—"):
                 tomning_lower = tomning.lower()
                 if "automatisk" in tomning_lower:
@@ -469,7 +492,6 @@ else:  # ==================== SPA DEL ====================
                 else:
                     ikon = "🔽"
                     farve = "#f9f9f9"
-
                 st.markdown(
                     f'<div style="background:{farve}; border-radius:8px; padding:0.7rem 1rem; margin-bottom:0.8rem;">'
                     f'<div style="color:#888; font-size:0.75rem;">Tømning</div>'
