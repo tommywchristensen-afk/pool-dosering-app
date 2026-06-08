@@ -429,10 +429,12 @@ else:  # ==================== SPA DEL ====================
 
         with info_cols[0]:
             if fyldning and fyldning.lower() not in ("", "ikke angivet", "—"):
+                import re as _re
+                fyldning_ren = _re.sub(r'\s*(min\.?|minutter)\s*$', '', fyldning.strip(), flags=_re.IGNORECASE)
                 st.markdown(
                     f'<div style="background:#f0f7ff; border-radius:8px; padding:0.7rem 1rem; margin-bottom:0.8rem;">'
                     f'<div style="color:#888; font-size:0.75rem;">Fyldning</div>'
-                    f'<div style="font-size:0.95rem; font-weight:600;">💧 {fyldning}</div>'
+                    f'<div style="font-size:0.95rem; font-weight:600;">💧 {fyldning_ren} minutter</div>'
                     f'</div>',
                     unsafe_allow_html=True
                 )
@@ -444,7 +446,7 @@ else:  # ==================== SPA DEL ====================
                 st.markdown(
                     f'<div style="background:#f0f7ff; border-radius:8px; padding:0.7rem 1rem; margin-bottom:0.8rem;">'
                     f'<div style="color:#888; font-size:0.75rem;">Fyldetid</div>'
-                    f'<div style="font-size:0.95rem; font-weight:600;">⏱ {fyldetid_ren} min.</div>'
+                    f'<div style="font-size:0.95rem; font-weight:600;">⏱ {fyldetid_ren} minutter</div>'
                     f'</div>',
                     unsafe_allow_html=True
                 )
