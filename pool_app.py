@@ -389,24 +389,24 @@ else:  # ==================== SPA DEL ====================
     
     st.title("🛁 SPA / Boblebad Service")
 
-    # ── Altid-synlig SPA instruktion ─────────────────────────────────────────
-    st.markdown(
-        """
-        <div style="background-color: #e8f4fd; border-left: 6px solid #1a73e8; padding: 1.2rem; margin: 0.5rem 0 1.2rem 0; border-radius: 6px; font-size: 1.05rem; color: #1a1a1a;">
-        <strong>📋 Generelle retningslinjer – gælder alle SPA-besøg</strong><br><br>
-        🌨️ <strong>Vinter:</strong> SPA der ikke har AKTIV frostbeskyttelse indstilles på <em>rest / range down / slp</em>
-        (eller tilsvarende indstilling på den pågældende SPA), og tømmes <strong>ikke</strong> for vand.<br><br>
-        💧 <strong>Vandskift:</strong> Vand skiftes hvis måling af klor og pH fordrer dette.<br><br>
-        🔄 <strong>Filtre – skift/rens ALTID</strong> – også ved midtvejstjek:<br>
-        &nbsp;&nbsp;&nbsp;• Sluk SPA inden filtrene tages ud (hvis muligt). Har SPA'en flere filtre, kan ét tages ud ad gangen.<br>
-        &nbsp;&nbsp;&nbsp;• Udskift til nye eller rensede filtre.<br>
-        &nbsp;&nbsp;&nbsp;• Alternativt renses filtrene <em>on location</em> med højtryksrenser og sættes tilbage i SPA.<br>
-        &nbsp;&nbsp;&nbsp;• Eller sættes i renserør – renserør findes i skuret ved kontoret (hvis HE ikke selv har et).<br>
-        &nbsp;&nbsp;&nbsp;• Filtre der i forvejen har stået i rens: spules og isættes SPA.
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+    # ── Generelle retningslinjer som dropdown ────────────────────────────────
+    with st.expander("📋 Generelle retningslinjer – gælder alle SPA-besøg", expanded=False):
+        st.markdown(
+            """
+            <div style="font-size: 1.05rem; color: #1a1a1a; padding: 0.2rem 0;">
+            🌨️ <strong>Vinter:</strong> SPA der ikke har AKTIV frostbeskyttelse indstilles på <em>rest / range down / slp</em>
+            (eller tilsvarende indstilling på den pågældende SPA), og tømmes <strong>ikke</strong> for vand.<br><br>
+            💧 <strong>Vandskift:</strong> Vand skiftes hvis måling af klor og pH fordrer dette.<br><br>
+            🔄 <strong>Filtre – skift/rens ALTID</strong> – også ved midtvejstjek:<br>
+            &nbsp;&nbsp;&nbsp;• Sluk SPA inden filtrene tages ud (hvis muligt). Har SPA'en flere filtre, kan ét tages ud ad gangen.<br>
+            &nbsp;&nbsp;&nbsp;• Udskift til nye eller rensede filtre.<br>
+            &nbsp;&nbsp;&nbsp;• Alternativt renses filtrene <em>on location</em> med højtryksrenser og sættes tilbage i SPA.<br>
+            &nbsp;&nbsp;&nbsp;• Eller sættes i renserør – renserør findes i skuret ved kontoret (hvis HE ikke selv har et).<br>
+            &nbsp;&nbsp;&nbsp;• Filtre der i forvejen har stået i rens: spules og isættes SPA.
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
     # ─────────────────────────────────────────────────────────────────────────
 
     spas = load_spas()
@@ -535,7 +535,6 @@ else:  # ==================== SPA DEL ====================
         # Billede(r)
         billede = selected_spa.get('Billede', '')
         if billede and billede.lower() not in ("", "ikke angivet", "—"):
-            # Split på komma eller linjeskift og rens whitespace
             import re
             billede_links = [b.strip() for b in re.split(r'[,\n]+', billede) if b.strip()]
             thumbs_html = "".join(
@@ -589,7 +588,6 @@ else:  # ==================== SPA DEL ====================
                 st.subheader("Anbefalet kemi ved afrejse")
                 st.markdown(f"**Målværdier ved afrejse:** pH = **{target_ph}** | Frit klor = **{target_cl} mg/l**")
 
-                # Hent liter fra SPA-data
                 try:
                     spa_liter = float(selected_spa.get('Liter', '0').replace(',', '.'))
                 except (ValueError, AttributeError):
