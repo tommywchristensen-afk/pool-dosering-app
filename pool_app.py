@@ -452,78 +452,71 @@ else:  # ==================== SPA DEL ====================
         tomning  = selected_spa.get('Tømning', '')
 
         import re as _re
-        info_cols = st.columns(4)
 
-        with info_cols[0]:
-            if fyldning and fyldning.lower() not in ("", "ikke angivet", "—"):
-                fyldning_ren = _re.sub(r'\s*(min\.?|minutter)\s*$', '', fyldning.strip(), flags=_re.IGNORECASE)
-                st.markdown(
-                    f'<div style="background:#f0f7ff; border-radius:8px; padding:0.7rem 1rem; margin-bottom:0.8rem;">'
-                    f'<div style="color:#888; font-size:0.75rem;">Fyldning</div>'
-                    f'<div style="font-size:0.95rem; font-weight:600;">💧 {fyldning_ren} minutter</div>'
-                    f'</div>',
-                    unsafe_allow_html=True
-                )
+        # Byg info-bokse som én samlet flex-række uden mellemrum
+        info_items = []
 
-        with info_cols[1]:
-            if fyldes and fyldes.lower() not in ("", "ikke angivet", "—"):
-                fyldes_lower = fyldes.lower()
-                if "automatisk" in fyldes_lower:
-                    fyldes_ikon = "🤖"
-                    fyldes_farve = "#f0fff4"
-                elif "kuglehane" in fyldes_lower or "semi" in fyldes_lower:
-                    fyldes_ikon = "🔧"
-                    fyldes_farve = "#fff8f0"
-                elif "vandslange" in fyldes_lower:
-                    fyldes_ikon = "🪣"
-                    fyldes_farve = "#f0f7ff"
-                else:
-                    fyldes_ikon = "💧"
-                    fyldes_farve = "#f0f7ff"
-                st.markdown(
-                    f'<div style="background:{fyldes_farve}; border-radius:8px; padding:0.7rem 1rem; margin-bottom:0.8rem;">'
-                    f'<div style="color:#888; font-size:0.75rem;">Fyldes</div>'
-                    f'<div style="font-size:0.95rem; font-weight:600;">{fyldes_ikon} {fyldes}</div>'
-                    f'</div>',
-                    unsafe_allow_html=True
-                )
+        if fyldning and fyldning.lower() not in ("", "ikke angivet", "—"):
+            fyldning_ren = _re.sub(r'\s*(min\.?|minutter)\s*$', '', fyldning.strip(), flags=_re.IGNORECASE)
+            info_items.append(
+                f'<div style="background:#f0f7ff; border-radius:8px; padding:0.7rem 1rem; flex:1; min-width:0;">'
+                f'<div style="color:#888; font-size:0.75rem;">Fyldning</div>'
+                f'<div style="font-size:0.95rem; font-weight:600;">💧 {fyldning_ren} minutter</div>'
+                f'</div>'
+            )
 
-        with info_cols[2]:
-            if fyldetid and fyldetid.lower() not in ("", "ikke angivet", "—"):
-                fyldetid_ren = _re.sub(r'\s*(min\.?|minutter)\s*$', '', fyldetid.strip(), flags=_re.IGNORECASE)
-                st.markdown(
-                    f'<div style="background:#f0f7ff; border-radius:8px; padding:0.7rem 1rem; margin-bottom:0.8rem;">'
-                    f'<div style="color:#888; font-size:0.75rem;">Fyldetid</div>'
-                    f'<div style="font-size:0.95rem; font-weight:600;">⏱ {fyldetid_ren} minutter</div>'
-                    f'</div>',
-                    unsafe_allow_html=True
-                )
+        if fyldes and fyldes.lower() not in ("", "ikke angivet", "—"):
+            fyldes_lower = fyldes.lower()
+            if "automatisk" in fyldes_lower:
+                fyldes_ikon, fyldes_farve = "🤖", "#f0fff4"
+            elif "kuglehane" in fyldes_lower or "semi" in fyldes_lower:
+                fyldes_ikon, fyldes_farve = "🔧", "#fff8f0"
+            elif "vandslange" in fyldes_lower:
+                fyldes_ikon, fyldes_farve = "🪣", "#f0f7ff"
+            else:
+                fyldes_ikon, fyldes_farve = "💧", "#f0f7ff"
+            info_items.append(
+                f'<div style="background:{fyldes_farve}; border-radius:8px; padding:0.7rem 1rem; flex:1; min-width:0;">'
+                f'<div style="color:#888; font-size:0.75rem;">Fyldes</div>'
+                f'<div style="font-size:0.95rem; font-weight:600;">{fyldes_ikon} {fyldes}</div>'
+                f'</div>'
+            )
 
-        with info_cols[3]:
-            if tomning and tomning.lower() not in ("", "ikke angivet", "—"):
-                tomning_lower = tomning.lower()
-                if "automatisk" in tomning_lower:
-                    ikon = "🤖"
-                    farve = "#f0fff4"
-                elif "kuglehane" in tomning_lower or "semi" in tomning_lower:
-                    ikon = "🔧"
-                    farve = "#fff8f0"
-                elif "dykpumpe" in tomning_lower or "manuel" in tomning_lower:
-                    ikon = "🪣"
-                    farve = "#fff0f0"
-                elif "ikke" in tomning_lower or "tømmes ikke" in tomning_lower:
-                    ikon = "🚫"
-                    farve = "#f5f5f5"
-                else:
-                    ikon = "🔽"
-                    farve = "#f9f9f9"
-                st.markdown(
-                    f'<div style="background:{farve}; border-radius:8px; padding:0.7rem 1rem; margin-bottom:0.8rem;">'
-                    f'<div style="color:#888; font-size:0.75rem;">Tømning</div>'
-                    f'<div style="font-size:0.95rem; font-weight:600;">{ikon} {tomning}</div>'
-                    f'</div>',
-                    unsafe_allow_html=True
-                )
+        if fyldetid and fyldetid.lower() not in ("", "ikke angivet", "—"):
+            fyldetid_ren = _re.sub(r'\s*(min\.?|minutter)\s*$', '', fyldetid.strip(), flags=_re.IGNORECASE)
+            info_items.append(
+                f'<div style="background:#f0f7ff; border-radius:8px; padding:0.7rem 1rem; flex:1; min-width:0;">'
+                f'<div style="color:#888; font-size:0.75rem;">Fyldetid</div>'
+                f'<div style="font-size:0.95rem; font-weight:600;">⏱ {fyldetid_ren} minutter</div>'
+                f'</div>'
+            )
+
+        if tomning and tomning.lower() not in ("", "ikke angivet", "—"):
+            tomning_lower = tomning.lower()
+            if "automatisk" in tomning_lower:
+                ikon, farve = "🤖", "#f0fff4"
+            elif "kuglehane" in tomning_lower or "semi" in tomning_lower:
+                ikon, farve = "🔧", "#fff8f0"
+            elif "dykpumpe" in tomning_lower or "manuel" in tomning_lower:
+                ikon, farve = "🪣", "#fff0f0"
+            elif "ikke" in tomning_lower or "tømmes ikke" in tomning_lower:
+                ikon, farve = "🚫", "#f5f5f5"
+            else:
+                ikon, farve = "🔽", "#f9f9f9"
+            info_items.append(
+                f'<div style="background:{farve}; border-radius:8px; padding:0.7rem 1rem; flex:1; min-width:0;">'
+                f'<div style="color:#888; font-size:0.75rem;">Tømning</div>'
+                f'<div style="font-size:0.95rem; font-weight:600;">{ikon} {tomning}</div>'
+                f'</div>'
+            )
+
+        if info_items:
+            st.markdown(
+                f'<div style="display:flex; flex-direction:row; gap:6px; margin-bottom:0.8rem;">'
+                + "".join(info_items) +
+                f'</div>',
+                unsafe_allow_html=True
+            )
 
 
         # Link knap
