@@ -12,13 +12,14 @@ import requests
 from oauth2client.service_account import ServiceAccountCredentials
 
 # ────────────────────────────────────────────────
-# Firebase Authentication
+# Firebase Authentication (API key fra secrets)
 # ────────────────────────────────────────────────
-FIREBASE_API_KEY = "AIzaSyBvHi208geuHeWjDQIN1EGSqhP4gfLFNyY"
+FIREBASE_API_KEY = st.secrets["firebase"]["api_key"]
+
 FIREBASE_SIGN_IN_URL = f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={FIREBASE_API_KEY}"
-FIREBASE_RESET_URL   = f"https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key={FIREBASE_API_KEY}"
-FIREBASE_SET_PW_URL  = f"https://identitytoolkit.googleapis.com/v1/accounts:update?key={FIREBASE_API_KEY}"
-FIREBASE_LOOKUP_URL  = f"https://identitytoolkit.googleapis.com/v1/accounts:lookup?key={FIREBASE_API_KEY}"
+FIREBASE_RESET_URL = f"https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key={FIREBASE_API_KEY}"
+FIREBASE_SET_PW_URL = f"https://identitytoolkit.googleapis.com/v1/accounts:update?key={FIREBASE_API_KEY}"
+FIREBASE_LOOKUP_URL = f"https://identitytoolkit.googleapis.com/v1/accounts:lookup?key={FIREBASE_API_KEY}"
 
 def firebase_sign_in(email, password):
     r = requests.post(FIREBASE_SIGN_IN_URL, json={
@@ -112,13 +113,11 @@ def show_set_password():
             else:
                 st.error(f"Kunne ikke gemme adgangskode: {err}")
 
-
 # ────────────────────────────────────────────────
 # Google Sheets opsætning
 # ────────────────────────────────────────────────
 POOL_SHEET_ID = "1J7hqPcK7rpRwrjaYAhKh5jDpk8tNYKhfM3_7FWCY2rA"
 POOL_WORKSHEET_NAME = "Sheet1"
-
 SPA_SHEET_ID = "16PLyJjec6WX-6Z5SQD1B_tl8qZYObKRx5Nt9ZRBHgRU"
 SPA_WORKSHEET_NAME = "Sheet1"
 
@@ -145,34 +144,31 @@ def load_pools():
     values = get_pool_sheet().get_all_values()
     if not values:
         return {}, {}
- 
     headers = [h.strip() for h in values[0]] if values else []
- 
     pools = {}
     pool_info = {}
- 
     for row in values[1:]:
         if not row or not row[0].strip(): continue
-     
+    
         name = row[0].strip()
         if not name or name.startswith("-"): continue
-     
+    
         vol_idx = headers.index("Volumen (m3)") if "Volumen (m3)" in headers else 1
         vol_str = row[vol_idx] if vol_idx < len(row) else "0"
         try:
             vol = float(vol_str)
         except (ValueError, TypeError):
             vol = 0.0
-     
+    
         pools[name] = vol
-     
+    
         extra = {}
         adresse_idx = headers.index("Adresse") if "Adresse" in headers else 2
         pumpetype_idx = headers.index("Pumpetype") if "Pumpetype" in headers else 3
         returskyl_idx = headers.index("Returskyl (5 min)") if "Returskyl (5 min)" in headers else 4
         nøglebokskode_idx = headers.index("Nøglebokskode") if "Nøglebokskode" in headers else 5
         he_idx = headers.index("HE telefonnummer") if "HE telefonnummer" in headers else 6
-     
+    
         if adresse_idx < len(row): extra["Adresse"] = row[adresse_idx] or "Ikke angivet"
         if pumpetype_idx < len(row): extra["Pumpetype"] = row[pumpetype_idx] or "Ikke angivet"
         if returskyl_idx < len(row) and row[returskyl_idx]:
@@ -186,39 +182,36 @@ def load_pools():
             extra["Returskyl (5 min)"] = "Ikke angivet"
         if nøglebokskode_idx < len(row): extra["Nøglebokskode"] = row[nøglebokskode_idx] or "Ikke angivet"
         if he_idx < len(row): extra["HE telefonnummer"] = row[he_idx] or "Ikke angivet"
-     
+    
         pool_info[name] = extra
- 
     return pools, pool_info
-
 
 @st.cache_data(ttl=300)
 def load_spas():
     values = get_spa_sheet().get_all_values()
     if not values or len(values) < 1:
         return []
-    
+   
     headers = [h.strip() for h in values[0]]
-    
+   
     spas = []
     for row in values[1:]:
         if not row or not row[0].strip():
             continue
-            
+           
         spa_dict = {}
         for i, header in enumerate(headers):
             if i < len(row):
                 spa_dict[header] = str(row[i]).strip() if row[i] else "Ikke angivet"
             else:
                 spa_dict[header] = "Ikke angivet"
-        
+       
         display_name = f"{spa_dict.get('ObjektNummer', '')} - {spa_dict.get('Adresse', '')}".strip(" -")
         if display_name:
             spa_dict['display_name'] = display_name
             spas.append(spa_dict)
-    
+   
     return spas
-
 
 def add_pool(name, vol):
     get_pool_sheet().append_row([name, vol, "", name, "", "", ""])
@@ -257,26 +250,26 @@ if "service_type" not in st.session_state:
 if st.session_state.service_type is None:
     st.set_page_config(page_title="FairPool – Vælg type", layout="centered")
     force_light_mode()
-    
+   
     col_logo, _ = st.columns([1, 5])
     with col_logo:
         st.image("https://iili.io/qai6KmJ.jpg", width=180)
-    
+   
     st.title("Velkommen til FairPool")
     st.subheader("Hvad skal du servicere i dag?")
-    
+   
     col1, col2 = st.columns(2, gap="large")
-    
+   
     with col1:
         if st.button("🏊 Swimmingpool", use_container_width=True, type="primary"):
             st.session_state.service_type = "pool"
             st.rerun()
-    
+   
     with col2:
         if st.button("🛁 SPA / Boblebad", use_container_width=True, type="primary"):
             st.session_state.service_type = "spa"
             st.rerun()
-    
+   
     st.stop()
 
 # ────────────────────────────────────────────────
@@ -288,14 +281,14 @@ if service_type == "pool":
     # ==================== POOL DEL ====================
     st.set_page_config(page_title="Pool Dosering", layout="wide")
     force_light_mode()
-    
+   
     col_logo, col_empty = st.columns([1, 5])
     with col_logo:
         st.image("https://iili.io/qai6KmJ.jpg", width=180)
-    
+   
     pools, pool_info = load_pools()
     pool_list = list(pools.keys())
-    
+   
     if pool_list:
         selected = st.selectbox("Vælg pool fra listen", pool_list)
         volume = pools[selected]
@@ -305,14 +298,14 @@ if service_type == "pool":
         selected = None
         volume = 0.0
         info = {}
-    
+   
     with st.expander("Tilføj ny pool", expanded=False):
         col1, col2 = st.columns([3, 2])
         with col1:
             new_name = st.text_input("Nyt pool-navn")
         with col2:
             new_vol = st.number_input("Volumen (m³)", min_value=0.0, value=0.0, step=1.0)
-     
+    
         if st.button("Gem ny pool"):
             if new_name.strip():
                 add_pool(new_name.strip(), new_vol)
@@ -320,12 +313,12 @@ if service_type == "pool":
                 st.rerun()
             else:
                 st.error("Du skal indtaste et pool-navn")
-    
+   
     if not pool_list:
         st.stop()
-    
+   
     st.header(f"{selected} - {volume:.1f} m³")
-    
+   
     if selected:
         info_lines = []
         ordered_keys = ["Adresse", "Nøglebokskode", "HE telefonnummer", "Pumpetype", "Returskyl (5 min)"]
@@ -337,14 +330,14 @@ if service_type == "pool":
                 info_lines.append(f"{key}: {info[key]}")
         if info_lines:
             st.caption(" | ".join(info_lines))
-    
+   
     leased = st.radio("Husets status", ["Ikke udlejet", "Udlejet"], horizontal=True)
     colA, colB = st.columns(2)
     with colA:
         current_ph = st.number_input("Nuværende pH", min_value=0.0, value=7.0, step=0.1)
     with colB:
         current_cl = st.number_input("Nuværende frit klor (mg/l)", min_value=0.0, value=0.0, step=0.1)
-    
+   
     # KLORGAS-ADVARSEL
     target_ph = 7.0
     target_cl_leave = 4.0
@@ -371,7 +364,7 @@ if service_type == "pool":
                 "- Sørg for god ventilation i poolrummet.\n"
                 "- Mål pH igen efter hævning, før du fortsætter."
             )
-    
+   
     st.markdown(
         """
         <div style="font-size: 1.05rem; color: #444; margin-bottom: 0.8rem;">
@@ -383,9 +376,9 @@ if service_type == "pool":
         """,
         unsafe_allow_html=True
     )
-    
+   
     has_existing_stick = st.checkbox("**Der ligger allerede en Tempo Stick i skimmer/klorinator**", value=False)
-    
+   
     st.markdown(
         """
         <div style="font-size: 0.9rem; color: #666; margin-top: -8px; margin-bottom: 0.5rem;">
@@ -394,7 +387,7 @@ if service_type == "pool":
         """,
         unsafe_allow_html=True
     )
-    
+   
     existing_sticks = None
     if has_existing_stick:
         existing_sticks = st.selectbox(
@@ -403,7 +396,7 @@ if service_type == "pool":
             index=0,
             help="Du skal vælge 1 eller 2 – 0 er ikke muligt når feltet er afkrydset"
         )
-    
+   
     target_ph = 7.0
     target_cl_leave = 4.0
     target_cl_maintenance = 5.5 if leased == "Udlejet" else 3.8
@@ -413,7 +406,7 @@ if service_type == "pool":
     delta_cl_maint = 0.0
     sticks_needed = 0.0
     ph_rise_from_sticks = 0.0
-    
+   
     if not has_existing_stick and leased == "Udlejet":
         if new_cl_after_leave <= 4.0:
             delta_cl_maint = max(0, target_cl_maintenance - new_cl_after_leave)
@@ -428,11 +421,11 @@ if service_type == "pool":
                 ph_rise_from_sticks = 0.4 * sticks_needed * (25.0 / volume)
         else:
             sticks_needed = 0
-    
+   
     ph_rise_from_briqs = delta_cl_leave * 0.05
     total_ph_rise_from_klor = ph_rise_from_briqs + ph_rise_from_sticks
     expected_ph_after_klor = current_ph + total_ph_rise_from_klor
-    
+   
     st.markdown(
         """
         <div style="background-color: #fff3cd; border-left: 6px solid #ffc107; padding: 1.2rem; margin: 1rem 0; border-radius: 6px; font-size: 1.15rem; color: #664d03;">
@@ -444,9 +437,9 @@ if service_type == "pool":
         """,
         unsafe_allow_html=True
     )
-    
+   
     st.header("Anbefalet dosering")
-    
+   
     if current_ph > 7.0 or expected_ph_after_klor > 7.0:
         delta_to_reduce = max(current_ph - target_ph, expected_ph_after_klor - target_ph)
         ml_minus = 35 * delta_to_reduce * volume
@@ -459,12 +452,12 @@ if service_type == "pool":
         st.markdown(f"**pH-plus → {ml_plus:.0f} ml**")
     else:
         st.success("pH er på eller tæt på målet efter klor – ingen PH-justering nødvendig")
-    
+   
     if current_cl > 6.0:
         mg_to_lower = current_cl - target_cl_leave
         antiklor_per_m3_per_mg = 0.83
         antiklor_total = antiklor_per_m3_per_mg * mg_to_lower * volume
-     
+    
         st.subheader(f"Sænkning af klor (for højt: {current_cl:.1f} mg/l)")
         st.markdown(f"**Anti-klor: {antiklor_total:.0f} gram/ml**")
         st.caption(f"→ sænker klor fra {current_cl:.1f} mg/l til {target_cl_leave} mg/l")
@@ -476,11 +469,11 @@ if service_type == "pool":
             briqs = 0.21 * delta_cl_leave * volume
             briqs_round = round(briqs)
             new_cl = current_cl + delta_cl_leave
-         
+        
             st.subheader(f"Opkloring til {target_klor_op} mg/l ved afgang")
             st.markdown(f"**HTH Briquetter/Daytabs: {briqs:.1f} stk → afrund til {briqs_round} stk**")
             st.caption(f"→ doserer klor fra {current_cl:.1f} mg/l til {new_cl:.1f} mg/l")
-    
+   
     st.subheader("Vedligehold - Tempo Sticks (5-7 dage)")
     if has_existing_stick:
         st.info(f"Der ligger allerede {existing_sticks} stk → ingen nye sticks foreslået")
@@ -494,16 +487,15 @@ if service_type == "pool":
     else:
         st.info("Klor efter opkloring er over 4.0 mg/l – ingen nye Tempo Sticks nødvendige til vedligehold.")
 
-else:  # ==================== SPA DEL ====================
+else: # ==================== SPA DEL ====================
     st.set_page_config(page_title="SPA Dosering", layout="wide")
     force_light_mode()
-    
+   
     col_logo, _ = st.columns([1, 5])
     with col_logo:
         st.image("https://iili.io/qai6KmJ.jpg", width=180)
-    
+   
     st.title("🛁 SPA / Boblebad Service")
-
     # ── Generelle retningslinjer som dropdown ────────────────────────────────
     with st.expander("📋 Generelle retningslinjer – gælder alle SPA-besøg", expanded=False):
         st.markdown(
@@ -523,32 +515,30 @@ else:  # ==================== SPA DEL ====================
             unsafe_allow_html=True
         )
     # ─────────────────────────────────────────────────────────────────────────
-
     spas = load_spas()
-    
+   
     if not spas:
         st.error("Ingen SPA'er fundet i Google Sheet.")
         st.stop()
-    
+   
     spa_options = [spa['display_name'] for spa in spas]
     selected_spa_display = st.selectbox("Vælg SPA fra listen", spa_options)
-    
+   
     selected_spa = next((spa for spa in spas if spa['display_name'] == selected_spa_display), None)
-    
+   
     if selected_spa:
         st.header(selected_spa.get('Adresse', 'SPA'))
-        
+       
         # Vis felter – kun hvis der er data
         fields = [
             ("ObjektNummer", selected_spa.get('ObjektNummer', '')),
-            ("Model",        selected_spa.get('Model', '')),
-            ("NøgleKode",    selected_spa.get('NøgleKode', '')),
-            ("Styresystem",  selected_spa.get('Styresystem', '')),
-            ("Liter",        selected_spa.get('Liter', '')),
+            ("Model", selected_spa.get('Model', '')),
+            ("NøgleKode", selected_spa.get('NøgleKode', '')),
+            ("Styresystem", selected_spa.get('Styresystem', '')),
+            ("Liter", selected_spa.get('Liter', '')),
         ]
         visible = [(label, val) for label, val in fields
                    if val and val.lower() not in ("", "ikke angivet", "—")]
-
         if visible:
             items_html = "".join(
                 f'<span style="margin-right:1.8rem;"><span style="color:#888;font-size:0.78rem;">{label}</span>'
@@ -559,18 +549,14 @@ else:  # ==================== SPA DEL ====================
                 f'<div style="margin: 0.3rem 0 0.5rem 0; line-height: 2;">{items_html}</div>',
                 unsafe_allow_html=True
             )
-
         # Fyldning, Fyldes, Fyldetid og Tømning
         fyldning = selected_spa.get('Fyldning', '')
-        fyldes   = selected_spa.get('Fyldes', '')
+        fyldes = selected_spa.get('Fyldes', '')
         fyldetid = selected_spa.get('Fyldetid', '')
-        tomning  = selected_spa.get('Tømning', '')
-
+        tomning = selected_spa.get('Tømning', '')
         import re as _re
-
         # Byg info-bokse som én samlet flex-række uden mellemrum
         info_items = []
-
         if fyldning and fyldning.lower() not in ("", "ikke angivet", "—"):
             fyldning_ren = _re.sub(r'\s*(min\.?|minutter)\s*$', '', fyldning.strip(), flags=_re.IGNORECASE)
             info_items.append(
@@ -579,7 +565,6 @@ else:  # ==================== SPA DEL ====================
                 f'<div style="font-size:0.95rem; font-weight:600;">💧 {fyldning_ren} minutter</div>'
                 f'</div>'
             )
-
         if fyldes and fyldes.lower() not in ("", "ikke angivet", "—"):
             fyldes_lower = fyldes.lower()
             if "automatisk" in fyldes_lower:
@@ -596,7 +581,6 @@ else:  # ==================== SPA DEL ====================
                 f'<div style="font-size:0.95rem; font-weight:600;">{fyldes_ikon} {fyldes}</div>'
                 f'</div>'
             )
-
         if fyldetid and fyldetid.lower() not in ("", "ikke angivet", "—"):
             fyldetid_ren = _re.sub(r'\s*(min\.?|minutter)\s*$', '', fyldetid.strip(), flags=_re.IGNORECASE)
             info_items.append(
@@ -605,7 +589,6 @@ else:  # ==================== SPA DEL ====================
                 f'<div style="font-size:0.95rem; font-weight:600;">⏱ {fyldetid_ren} minutter</div>'
                 f'</div>'
             )
-
         if tomning and tomning.lower() not in ("", "ikke angivet", "—"):
             tomning_lower = tomning.lower()
             if "automatisk" in tomning_lower:
@@ -624,7 +607,6 @@ else:  # ==================== SPA DEL ====================
                 f'<div style="font-size:0.95rem; font-weight:600;">{ikon} {tomning}</div>'
                 f'</div>'
             )
-
         if info_items:
             st.markdown(
                 f'<div style="display:flex; flex-direction:row; gap:6px; margin-bottom:0.8rem;">'
@@ -632,14 +614,11 @@ else:  # ==================== SPA DEL ====================
                 f'</div>',
                 unsafe_allow_html=True
             )
-
-
         # Link knap
         link = selected_spa.get('Link', '')
         if link and link.lower() != "ikke angivet" and link.strip():
             if st.button("🔗 Åbn Link / Manual", type="primary"):
                 st.markdown(f'<a href="{link}" target="_blank">Åbn link i ny fane</a>', unsafe_allow_html=True)
-
         # Billede(r)
         billede = selected_spa.get('Billede', '')
         if billede and billede.lower() not in ("", "ikke angivet", "—"):
@@ -657,7 +636,7 @@ else:  # ==================== SPA DEL ====================
                 f'<div style="display:flex; flex-wrap:wrap; gap:0.5rem; margin: 0.5rem 0 1rem 0;">{thumbs_html}</div>',
                 unsafe_allow_html=True
             )
-        
+       
         colA, colB = st.columns(2)
         with colA:
             ph_indtastet = st.checkbox("pH målt", value=False)
@@ -665,16 +644,14 @@ else:  # ==================== SPA DEL ====================
         with colB:
             klor_indtastet = st.checkbox("Klor målt", value=False)
             current_cl = st.number_input("Nuværende frit klor (mg/l)", min_value=0.0, value=0.0, step=0.1, disabled=not klor_indtastet)
-
         service_mode = st.radio(
             "Hvilken service skal udføres?",
             ["Tømme", "Fylde", "Tømme + Fylde (skift af vand)"],
             horizontal=True
         )
-        
+       
         target_ph = 7.0
         target_cl = 4.0
-
         if service_mode == "Tømme":
             st.markdown(
                 """
@@ -688,19 +665,16 @@ else:  # ==================== SPA DEL ====================
                 """,
                 unsafe_allow_html=True
             )
-
         else:
             if not ph_indtastet or not klor_indtastet:
                 st.info("Indtast pH og klor-måling for at se kemianbefalinger.")
             else:
                 st.subheader("Anbefalet kemi ved afrejse")
                 st.markdown(f"**Målværdier ved afrejse:** pH = **{target_ph}** | Frit klor = **{target_cl} mg/l**")
-
                 try:
                     spa_liter = float(selected_spa.get('Liter', '0').replace(',', '.'))
                 except (ValueError, AttributeError):
                     spa_liter = 0.0
-
                 # pH-justering
                 delta_ph = current_ph - target_ph
                 if delta_ph > 0.2:
@@ -718,7 +692,6 @@ else:  # ==================== SPA DEL ====================
                     st.error(f"**Brug pH-plus:** ca. **{ml_ph_plus} ml**")
                 else:
                     st.success("pH er inden for godt område")
-
                 # Klor-justering
                 delta_cl = current_cl - target_cl
                 if delta_cl < -0.5:
@@ -728,22 +701,18 @@ else:  # ==================== SPA DEL ====================
                     else:
                         sunwac_antal = max(1, round((spa_liter if spa_liter > 0 else 500) / 500))
                         sunwac_navn = "SunWac 9"
-
                     st.error("**Hurtig opkloring (gæster samme dag):**")
                     st.markdown(f"**{sunwac_navn} (Saniklar):** {sunwac_antal} stk")
-
                     tab_twenty = max(2, round((spa_liter if spa_liter > 0 else 2500) / 2500) * 2)
                     st.error("**Langtids-klor (holder ca. 7 dage):**")
                     st.markdown(f"**Tab Twenty:** {tab_twenty} stk")
                     st.caption("Placer i floater eller klorinator for langsom frigivelse over 7 dage.")
-
                 elif delta_cl > 1.5:
                     st.warning("**Klor for højt** – vent eller fortynd hvis muligt.")
                 else:
                     st.success(f"Klor-niveau er godt ({current_cl:.1f} mg/l)")
                     tab_twenty = max(2, round((spa_liter if spa_liter > 0 else 2500) / 2500) * 2)
                     st.caption(f"Til vedligehold: Brug **{tab_twenty} Tab Twenty** til ca. 7 dages klor.")
-
             if service_mode == "Tømme + Fylde (skift af vand)":
                 st.markdown(
                     """
