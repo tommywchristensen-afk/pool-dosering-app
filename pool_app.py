@@ -8,7 +8,110 @@
 
 import streamlit as st
 import gspread
+import requests
 from oauth2client.service_account import ServiceAccountCredentials
+
+# ────────────────────────────────────────────────
+# Firebase Authentication
+# ────────────────────────────────────────────────
+FIREBASE_API_KEY = "AIzaSyBvHi208geuHeWjDQIN1EGSqhP4gfLFNyY"
+FIREBASE_SIGN_IN_URL = f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={FIREBASE_API_KEY}"
+FIREBASE_RESET_URL   = f"https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key={FIREBASE_API_KEY}"
+FIREBASE_SET_PW_URL  = f"https://identitytoolkit.googleapis.com/v1/accounts:update?key={FIREBASE_API_KEY}"
+FIREBASE_LOOKUP_URL  = f"https://identitytoolkit.googleapis.com/v1/accounts:lookup?key={FIREBASE_API_KEY}"
+
+def firebase_sign_in(email, password):
+    r = requests.post(FIREBASE_SIGN_IN_URL, json={
+        "email": email, "password": password, "returnSecureToken": True
+    })
+    data = r.json()
+    if "idToken" in data:
+        return data["idToken"], None
+    msg = data.get("error", {}).get("message", "Ukendt fejl")
+    return None, msg
+
+def firebase_send_reset(email):
+    requests.post(FIREBASE_RESET_URL, json={"requestType": "PASSWORD_RESET", "email": email})
+
+def firebase_set_password(id_token, new_password):
+    r = requests.post(FIREBASE_SET_PW_URL, json={"idToken": id_token, "password": new_password, "returnSecureToken": True})
+    data = r.json()
+    return "idToken" in data, data.get("error", {}).get("message", "")
+
+def firebase_needs_password_set(id_token):
+    r = requests.post(FIREBASE_LOOKUP_URL, json={"idToken": id_token})
+    data = r.json()
+    users = data.get("users", [])
+    if not users:
+        return False
+    user = users[0]
+    return user.get("lastLoginAt") == user.get("createdAt")
+
+def show_login():
+    force_light_mode()
+    col_logo, _ = st.columns([1, 5])
+    with col_logo:
+        st.image("https://iili.io/qai6KmJ.jpg", width=180)
+    st.title("FairPool – Log ind")
+    st.markdown("Log ind med din arbejds-email og adgangskode.")
+    tab_login, tab_reset = st.tabs(["Log ind", "Glemt adgangskode"])
+    with tab_login:
+        email = st.text_input("Email", key="login_email")
+        password = st.text_input("Adgangskode", type="password", key="login_password")
+        if st.button("Log ind", type="primary", use_container_width=True):
+            if not email or not password:
+                st.error("Udfyld både email og adgangskode.")
+            else:
+                token, err = firebase_sign_in(email.strip(), password)
+                if token:
+                    if firebase_needs_password_set(token):
+                        st.session_state["pending_token"] = token
+                        st.session_state["pending_email"] = email.strip()
+                        st.rerun()
+                    else:
+                        st.session_state["auth_token"] = token
+                        st.session_state["auth_email"] = email.strip()
+                        st.rerun()
+                else:
+                    if "EMAIL_NOT_FOUND" in err or "INVALID_PASSWORD" in err or "INVALID_LOGIN_CREDENTIALS" in err:
+                        st.error("Forkert email eller adgangskode.")
+                    elif "TOO_MANY_ATTEMPTS" in err:
+                        st.error("For mange forsøg – prøv igen senere.")
+                    else:
+                        st.error(f"Login fejlede: {err}")
+    with tab_reset:
+        reset_email = st.text_input("Din email", key="reset_email")
+        if st.button("Send nulstillingsmail", use_container_width=True):
+            if reset_email.strip():
+                firebase_send_reset(reset_email.strip())
+                st.success("Hvis emailen er registreret, er der sendt en nulstillingsmail.")
+            else:
+                st.error("Indtast din email.")
+
+def show_set_password():
+    force_light_mode()
+    col_logo, _ = st.columns([1, 5])
+    with col_logo:
+        st.image("https://iili.io/qai6KmJ.jpg", width=180)
+    st.title("Vælg din adgangskode")
+    st.markdown("Velkommen! Da dette er dit første login, skal du vælge din egen adgangskode.")
+    pw1 = st.text_input("Ny adgangskode (mindst 6 tegn)", type="password", key="new_pw1")
+    pw2 = st.text_input("Gentag adgangskode", type="password", key="new_pw2")
+    if st.button("Gem adgangskode", type="primary", use_container_width=True):
+        if len(pw1) < 6:
+            st.error("Adgangskoden skal være mindst 6 tegn.")
+        elif pw1 != pw2:
+            st.error("Adgangskoderne er ikke ens.")
+        else:
+            ok, err = firebase_set_password(st.session_state["pending_token"], pw1)
+            if ok:
+                st.session_state["auth_token"] = st.session_state.pop("pending_token")
+                st.session_state["auth_email"] = st.session_state.pop("pending_email")
+                st.success("Adgangskode gemt – du er nu logget ind!")
+                st.rerun()
+            else:
+                st.error(f"Kunne ikke gemme adgangskode: {err}")
+
 
 # ────────────────────────────────────────────────
 # Google Sheets opsætning
@@ -132,6 +235,18 @@ def force_light_mode():
         </style>""",
         unsafe_allow_html=True
     )
+
+# ────────────────────────────────────────────────
+# Login gate
+# ────────────────────────────────────────────────
+if "auth_token" not in st.session_state:
+    if "pending_token" in st.session_state:
+        st.set_page_config(page_title="FairPool – Vælg adgangskode", layout="centered")
+        show_set_password()
+    else:
+        st.set_page_config(page_title="FairPool – Log ind", layout="centered")
+        show_login()
+    st.stop()
 
 # ────────────────────────────────────────────────
 # Valg af Pool eller SPA ved første opstart
@@ -684,10 +799,15 @@ else:  # ==================== SPA DEL ====================
                 )
 
 # ────────────────────────────────────────────────
-# Sidebar
+# Sidebar – skift type (log ud håndteres i login gate ovenfor)
 # ────────────────────────────────────────────────
 with st.sidebar:
     if st.button("🔄 Skift mellem Pool og SPA"):
         if "service_type" in st.session_state:
             del st.session_state.service_type
+        st.rerun()
+    st.divider()
+    if st.button("🔒 Log ud"):
+        for key in ["auth_token", "auth_email", "service_type"]:
+            st.session_state.pop(key, None)
         st.rerun()
