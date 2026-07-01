@@ -173,6 +173,7 @@ def load_pools():
         returskyl_idx = headers.index("Returskyl (5 min)") if "Returskyl (5 min)" in headers else 4
         nøglebokskode_idx = headers.index("Nøglebokskode") if "Nøglebokskode" in headers else 5
         he_idx = headers.index("HE telefonnummer") if "HE telefonnummer" in headers else 6
+        instruktioner_idx = headers.index("Instruktioner") if "Instruktioner" in headers else None
      
         if adresse_idx < len(row): extra["Adresse"] = row[adresse_idx] or "Ikke angivet"
         if pumpetype_idx < len(row): extra["Pumpetype"] = row[pumpetype_idx] or "Ikke angivet"
@@ -187,6 +188,8 @@ def load_pools():
             extra["Returskyl (5 min)"] = "Ikke angivet"
         if nøglebokskode_idx < len(row): extra["Nøglebokskode"] = row[nøglebokskode_idx] or "Ikke angivet"
         if he_idx < len(row): extra["HE telefonnummer"] = row[he_idx] or "Ikke angivet"
+        if instruktioner_idx is not None and instruktioner_idx < len(row):
+            extra["Instruktioner"] = row[instruktioner_idx] or ""
      
         pool_info[name] = extra
  
@@ -334,10 +337,19 @@ if service_type == "pool":
             if key in info:
                 info_lines.append(f"{key}: {info[key]}")
         for key in info:
-            if key not in ordered_keys:
+            if key not in ordered_keys and key != "Instruktioner":
                 info_lines.append(f"{key}: {info[key]}")
         if info_lines:
             st.caption(" | ".join(info_lines))
+
+        # Instruktioner (udfoldelig sektion)
+        instruktioner = info.get("Instruktioner", "")
+        if instruktioner and instruktioner.strip().lower() not in ("", "ikke angivet", "—"):
+            with st.expander("➕ Se arbejdsinstruktioner for denne pool"):
+                st.markdown(
+                    f'<div style="font-size: 0.95rem; line-height: 1.6; white-space: pre-wrap;">{instruktioner}</div>',
+                    unsafe_allow_html=True
+                )
     
     leased = st.radio("Husets status", ["Ikke udlejet", "Udlejet"], horizontal=True)
     colA, colB = st.columns(2)
@@ -658,6 +670,15 @@ else:  # ==================== SPA DEL ====================
                 f'<div style="display:flex; flex-wrap:wrap; gap:0.5rem; margin: 0.5rem 0 1rem 0;">{thumbs_html}</div>',
                 unsafe_allow_html=True
             )
+
+        # Instruktioner (udfoldelig sektion)
+        instruktioner = selected_spa.get('Instruktioner', '')
+        if instruktioner and instruktioner.strip().lower() not in ("", "ikke angivet", "—"):
+            with st.expander("➕ Se arbejdsinstruktioner for denne SPA"):
+                st.markdown(
+                    f'<div style="font-size: 0.95rem; line-height: 1.6; white-space: pre-wrap;">{instruktioner}</div>',
+                    unsafe_allow_html=True
+                )
         
         colA, colB = st.columns(2)
         with colA:
