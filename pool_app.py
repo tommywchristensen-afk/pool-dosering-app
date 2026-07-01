@@ -10,6 +10,17 @@ import streamlit as st
 import gspread
 import requests
 from oauth2client.service_account import ServiceAccountCredentials
+from streamlit_cookies_manager import EncryptedCookieManager
+
+# ────────────────────────────────────────────────
+# Cookie manager (til at huske login på tværs af genindlæsninger)
+# ────────────────────────────────────────────────
+cookies = EncryptedCookieManager(
+    prefix="fairpool/",
+    password=st.secrets["cookies"]["password"],
+)
+if not cookies.ready():
+    st.stop()
 
 # ────────────────────────────────────────────────
 # Firebase Authentication (API key fra secrets)
@@ -20,6 +31,7 @@ FIREBASE_SIGN_IN_URL = f"https://identitytoolkit.googleapis.com/v1/accounts:sign
 FIREBASE_RESET_URL = f"https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key={FIREBASE_API_KEY}"
 FIREBASE_SET_PW_URL = f"https://identitytoolkit.googleapis.com/v1/accounts:update?key={FIREBASE_API_KEY}"
 FIREBASE_LOOKUP_URL = f"https://identitytoolkit.googleapis.com/v1/accounts:lookup?key={FIREBASE_API_KEY}"
+FIREBASE_REFRESH_URL = f"https://securetoken.googleapis.com/v1/token?key={FIREBASE_API_KEY}"
 
 def firebase_sign_in(email, password):
     r = requests.post(FIREBASE_SIGN_IN_URL, json={
@@ -27,9 +39,9 @@ def firebase_sign_in(email, password):
     })
     data = r.json()
     if "idToken" in data:
-        return data["idToken"], None
+        return data["idToken"], data.get("refreshToken"), None
     msg = data.get("error", {}).get("message", "Ukendt fejl")
-    return None, msg
+    return None, None, msg
 
 def firebase_send_reset(email):
     requests.post(FIREBASE_RESET_URL, json={"requestType": "PASSWORD_RESET", "email": email})
@@ -48,6 +60,16 @@ def firebase_needs_password_set(id_token):
     user = users[0]
     return user.get("lastLoginAt") == user.get("createdAt")
 
+def firebase_refresh_token(refresh_token):
+    r = requests.post(FIREBASE_REFRESH_URL, data={
+        "grant_type": "refresh_token",
+        "refresh_token": refresh_token
+    })
+    data = r.json()
+    if "id_token" in data:
+        return data["id_token"], data["refresh_token"], None
+    return None, None, data.get("error", {}).get("message", "Ukendt fejl")
+
 def show_login():
     force_light_mode()
     col_logo, _ = st.columns([1, 5])
@@ -63,15 +85,20 @@ def show_login():
             if not email or not password:
                 st.error("Udfyld både email og adgangskode.")
             else:
-                token, err = firebase_sign_in(email.strip(), password)
+                token, refresh_token, err = firebase_sign_in(email.strip(), password)
                 if token:
                     if firebase_needs_password_set(token):
                         st.session_state["pending_token"] = token
                         st.session_state["pending_email"] = email.strip()
+                        st.session_state["pending_refresh"] = refresh_token
                         st.rerun()
                     else:
                         st.session_state["auth_token"] = token
                         st.session_state["auth_email"] = email.strip()
+                        if refresh_token:
+                            cookies["refresh_token"] = refresh_token
+                            cookies["email"] = email.strip()
+                            cookies.save()
                         st.rerun()
                 else:
                     if "EMAIL_NOT_FOUND" in err or "INVALID_PASSWORD" in err or "INVALID_LOGIN_CREDENTIALS" in err:
@@ -108,6 +135,11 @@ def show_set_password():
             if ok:
                 st.session_state["auth_token"] = st.session_state.pop("pending_token")
                 st.session_state["auth_email"] = st.session_state.pop("pending_email")
+                pending_refresh = st.session_state.pop("pending_refresh", None)
+                if pending_refresh:
+                    cookies["refresh_token"] = pending_refresh
+                    cookies["email"] = st.session_state["auth_email"]
+                    cookies.save()
                 st.success("Adgangskode gemt – du er nu logget ind!")
                 st.rerun()
             else:
@@ -243,6 +275,18 @@ def force_light_mode():
 # ────────────────────────────────────────────────
 # Login gate
 # ────────────────────────────────────────────────
+if "auth_token" not in st.session_state:
+    # Forsøg stille genlogin via cookie, før login-skærmen vises
+    saved_refresh = cookies.get("refresh_token")
+    if saved_refresh:
+        new_id_token, new_refresh_token, err = firebase_refresh_token(saved_refresh)
+        if new_id_token:
+            st.session_state["auth_token"] = new_id_token
+            st.session_state["auth_email"] = cookies.get("email", "")
+            cookies["refresh_token"] = new_refresh_token
+            cookies.save()
+            st.rerun()
+
 if "auth_token" not in st.session_state:
     if "pending_token" in st.session_state:
         st.set_page_config(page_title="FairPool – Vælg adgangskode", layout="centered")
@@ -832,4 +876,7 @@ with st.sidebar:
     if st.button("🔒 Log ud"):
         for key in ["auth_token", "auth_email", "service_type"]:
             st.session_state.pop(key, None)
+        cookies["refresh_token"] = ""
+        cookies["email"] = ""
+        cookies.save()
         st.rerun()
