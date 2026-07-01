@@ -345,7 +345,7 @@ if service_type == "pool":
         # Instruktioner (udfoldelig sektion)
         instruktioner = info.get("Instruktioner", "")
         if instruktioner and instruktioner.strip().lower() not in ("", "ikke angivet", "—"):
-            with st.expander("➕ Se arbejdsinstruktioner for denne pool"):
+            with st.expander("➕ Se instruktioner for denne pool"):
                 st.markdown(
                     f'<div style="font-size: 0.95rem; line-height: 1.6; white-space: pre-wrap;">{instruktioner}</div>',
                     unsafe_allow_html=True
@@ -674,7 +674,7 @@ else:  # ==================== SPA DEL ====================
         # Instruktioner (udfoldelig sektion)
         instruktioner = selected_spa.get('Instruktioner', '')
         if instruktioner and instruktioner.strip().lower() not in ("", "ikke angivet", "—"):
-            with st.expander("➕ Se arbejdsinstruktioner for denne SPA"):
+            with st.expander("➕ Se instruktioner for denne SPA"):
                 st.markdown(
                     f'<div style="font-size: 0.95rem; line-height: 1.6; white-space: pre-wrap;">{instruktioner}</div>',
                     unsafe_allow_html=True
